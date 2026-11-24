@@ -1,0 +1,96 @@
+---
+title: 'Una galaxia de fondo en canvas 2D, barata y sin estado'
+description: 'Cómo animo miles de estrellas detrás de una landing con canvas 2D: posición como función del tiempo, unidades relativas, colores del tema y menos movimiento.'
+date: 2026-11-22
+tags: ['canvas', 'rendimiento', 'astro']
+---
+
+La landing de Orion Consultoría tiene de fondo una galaxia espiral que gira despacio detrás de todo el contenido. No usa WebGL ni librerías: es un `canvas` 2D y unas 200 líneas en un componente de Astro. A diferencia del hero 3D de este portafolio, aquí el reto no era cargar un motor sin estorbar, sino animar unos miles de puntos en cada fotograma sin que el fondo se convierta en el problema. Estas son las decisiones que lo hacen barato y predecible.
+
+## Estrellas sin estado: la posición es función del tiempo
+
+En un sistema de partículas típico, cada fotograma actualizas posiciones: `x += vx * dt`. Aquí no. Cada estrella guarda solo sus parámetros polares (radio, ángulo inicial, profundidad, tamaño, brillo) y su posición se **calcula** a partir del tiempo que entrega `requestAnimationFrame`.
+
+```ts
+for (const s of stars) {
+  // Rotación diferencial: el centro gira más rápido que los bordes.
+  const angle = s.a + time * 0.000014 / (0.25 + s.r);
+  const dist = s.r * diag;                       // r es relativo a la diagonal
+  const ex = Math.cos(angle) * dist;
+  const ey = Math.sin(angle) * dist * SQUASH;    // disco visto de lado: elipse
+  const x = cx + ex * cos - ey * sin;            // inclinar el disco
+  let y = cy + ex * sin + ey * cos - scroll * (0.02 + s.depth * 0.06);
+  y = ((y % (h + 40)) + h + 40) % (h + 40) - 20; // el parallax da la vuelta
+  if (x < -4 || x > w + 4) continue;             // fuera de pantalla: nada
+  // ...pintar
+}
+```
+
+Esto trae varias ventajas:
+
+- **No hay deriva.** No se acumulan errores de redondeo ni se desincroniza nada si se pierden fotogramas.
+- **Cualquier instante se puede pintar.** El modo sin movimiento es literalmente `draw(0)`.
+- **La rotación diferencial sale gratis.** La velocidad angular depende del radio (`1 / (0.25 + r)`), así que el núcleo gira más rápido que los brazos y la espiral se enrolla sola con el tiempo.
+
+El parallax del scroll también es una fórmula: cada estrella se desplaza según su profundidad. Para que nunca se quede un hueco sin cielo, la `y` da la vuelta con un módulo. Ojo con ese módulo: en JavaScript `%` conserva el signo, y `-30 % 100` es `-30`. El truco `((y % m) + m) % m` lo lleva siempre al rango positivo.
+
+## Unidades relativas y cantidad por área
+
+Las estrellas se generan una sola vez, con el radio relativo a la diagonal de la pantalla. Así un `resize` solo recalcula el tamaño del canvas y no vuelve a repartir el cielo. Esto importa en móvil: al hacer scroll aparece y desaparece la barra del navegador, cambia el alto de la ventana y, si regeneraras las estrellas, todo saltaría.
+
+La cantidad depende del área de `screen`, no de la ventana, por la misma razón: no cambia al redimensionar. Hay tres poblaciones con tope cada una: estrellas sueltas por todo el cielo (hasta 500), estrellas en los brazos espirales (hasta 900) y polvo fino pegado a los brazos (hasta 2400), que es lo que realmente dibuja la forma. Un teléfono pinta muchas menos que un monitor grande.
+
+## Pintar barato
+
+- **`devicePixelRatio` topado en 2.** El canvas se redimensiona con un `setTransform` una sola vez por `resize`, y todo el dibujo trabaja en píxeles CSS.
+- **Rectángulos para lo pequeño.** Las estrellas de menos de 1.1 px y todo el polvo se pintan con `fillRect`, que no construye ningún *path*. Solo las grandes usan `arc`, y únicamente las más grandes llevan halo.
+- **Saltar lo que no se ve.** Una estrella fuera del ancho visible no se pinta.
+- **`resize` con debounce** de 120 ms, para no redimensionar el canvas decenas de veces mientras arrastras la ventana.
+
+Hay un costo que acepté: cada estrella arma su `fillStyle` como texto en cada fotograma. Si algún día pesa, el siguiente paso sería agrupar por color y opacidad en unos cuantos niveles y cambiar el estilo una vez por grupo.
+
+## Los colores vienen del tema
+
+La galaxia tiene que verse bien en tema claro y oscuro, y los colores viven en CSS, no en JavaScript. Las variables guardan los canales sueltos (`--star: 255 255 255`), así el script puede construir `rgb(255 255 255 / 0.4)` con la opacidad que quiera.
+
+```ts
+const readColors = () => {
+  const css = getComputedStyle(document.documentElement);
+  color = {
+    star: css.getPropertyValue('--star').trim() || color.star,       // "255 255 255"
+    accent: css.getPropertyValue('--star-accent').trim() || color.accent,
+    alpha: Number(css.getPropertyValue('--star-alpha')) || color.alpha,
+  };
+};
+
+// El tema cambia con el botón (data-theme) o con el sistema.
+new MutationObserver(() => { readColors(); if (reduce.matches) draw(0); })
+  .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+```
+
+Leer `getComputedStyle` en cada fotograma sería caro, por eso se lee al inicio y solo se vuelve a leer cuando cambia el tema: con un `MutationObserver` sobre `data-theme` y escuchando `prefers-color-scheme`. Si el canvas está quieto (modo sin movimiento), se repinta ese único fotograma con los colores nuevos.
+
+## Menos movimiento y pestañas ocultas
+
+```ts
+const start = () => {
+  cancelAnimationFrame(frame);
+  if (reduce.matches) draw(0);              // un solo fotograma quieto
+  else frame = requestAnimationFrame(loop);
+};
+reduce.addEventListener('change', start);   // reacciona sin recargar
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cancelAnimationFrame(frame);
+  else start();
+});
+```
+
+Con `prefers-reduced-motion` la galaxia no desaparece, se queda quieta: el fondo sigue igual, solo sin animación. Como escucho el `change` de la media query, si alguien activa la preferencia con la página abierta, el bucle se detiene en ese momento. Y aunque el navegador ya pausa `requestAnimationFrame` en pestañas ocultas, cancelo el bucle de forma explícita y lo reanudo con `start()`, que vuelve a revisar la preferencia.
+
+El contenedor lleva `aria-hidden="true"` y `pointer-events: none`: es decoración y no debe estorbar a lectores de pantalla ni a los clics.
+
+## Lo que no resuelve
+
+Al ser un fondo fijo de página completa, siempre está visible, así que no tiene sentido pausarlo con `IntersectionObserver` como hice con el hero 3D. Mientras la pestaña esté abierta y visible, se pinta cada fotograma. En equipos muy modestos, una opción sería bajar a la mitad de fotogramas o pintar menos polvo; hoy no lo hace.
+
+Cómo encaja la galaxia con el resto de la página (el guion de venta, la calculadora y el SEO) está en el [caso de estudio de Orion Consultoría](/proyectos/orion-consultoria/).

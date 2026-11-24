@@ -1,0 +1,60 @@
+---
+import SectionHead from './SectionHead.astro';
+import { ruta, t, type Lang } from '../i18n/ui';
+import { persona } from '../data/sitio';
+
+interface Props {
+  lang: Lang;
+  n?: string;
+}
+const { lang, n } = Astro.props;
+const tr = t(lang);
+const pasos = [1, 2, 3, 4] as const;
+// Icono de cada paso, dibujado en una cuadrícula de 24.
+const iconos = [
+  'M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm4.5 10.5L20 20', // lupa
+  'M6 3h9l4 4v14H6Z M15 3v4h4 M9 12h7 M9 16h5', // documento
+  'M4 18 10 6l4 7 2-3 4 8Z', // montañas / construir
+  'M12 3a9 9 0 1 0 9 9 M12 7v5l3 2 M17 3h4v4', // reloj con flecha
+];
+---
+
+<section class="relative overflow-hidden border-y border-line py-20 md:py-32" aria-labelledby="proceso">
+  <div class="pointer-events-none absolute -bottom-40 -left-40 size-[30rem] rounded-full bg-accent-2 opacity-10 blur-3xl" aria-hidden="true"></div>
+  <div class="container-x relative">
+    <SectionHead id="proceso" n={n} label={tr('process.label')} title={tr('process.title')} />
+    <p class="mt-6 max-w-2xl text-lg text-fg/75" data-reveal>{tr('process.lead')}</p>
+
+    <ol class="relative mt-14 grid gap-8 md:grid-cols-4 md:gap-6">
+      <!-- Línea que une los pasos. -->
+      <span class="absolute top-7 right-0 left-0 hidden h-px bg-gradient-to-r from-accent via-accent-2 to-transparent md:block" aria-hidden="true"></span>
+      {
+        pasos.map((p, i) => (
+          <li class="relative flex gap-5 md:flex-col md:gap-0" data-reveal style={`--d:${i * 0.1}s`}>
+            <span class="relative z-10 flex size-14 shrink-0 items-center justify-center rounded-2xl border border-line bg-bg text-accent">
+              <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d={iconos[i]} />
+              </svg>
+              <span class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-accent font-mono text-[10px] font-semibold text-on-accent">
+                {p}
+              </span>
+            </span>
+            <div class="md:mt-6">
+              <h3 class="font-display text-xl font-bold tracking-tight">{tr(`process.${p}.title`)}</h3>
+              <p class="mt-2 text-fg/70">{tr(`process.${p}.body`)}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="mt-14 flex flex-col gap-3 xs:flex-row xs:items-center" data-reveal>
+      <a href={ruta(lang, 'contact')} class="btn btn-primary" data-umami-event="cta-contacto" data-umami-event-ubicacion="proceso">
+        {tr('process.cta')} <span aria-hidden="true">→</span>
+      </a>
+      <a href={persona.empresa.url} target="_blank" rel="noopener" class="btn btn-ghost" data-umami-event="orion" data-umami-event-ubicacion="proceso">
+        {tr('process.orion')} ↗
+      </a>
+    </div>
+  </div>
+</section>

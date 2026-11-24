@@ -14,6 +14,8 @@ export const persona = {
   github: 'https://github.com/Erick-Gonza',
   linkedin: 'https://www.linkedin.com/in/erick-gzz/',
   empresa: { nombre: 'Orion Consultoría', url: 'https://orion-consultoria.tech' },
+  // Empleo actual.
+  trabajo: { empresa: 'AGGY', puesto: 'Fullstack Software Developer', ciudad: 'San Pedro Garza García, N.L.' },
   // Ruta del CV en public/. Si el archivo no existe aún, el botón no se muestra (ver src/data/cv.ts).
   cv: { es: '/cv/erick-cv-es.pdf', en: '/cv/erick-cv-en.pdf' },
 } as const;

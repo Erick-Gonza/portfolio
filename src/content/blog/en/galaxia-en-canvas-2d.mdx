@@ -1,0 +1,96 @@
+---
+title: 'A canvas 2D galaxy background, cheap and stateless'
+description: 'How I animate thousands of stars behind a landing page with canvas 2D: position as a function of time, relative units, theme colors, and reduced motion.'
+date: 2026-11-22
+tags: ['canvas', 'performance', 'astro']
+---
+
+The Orion Consultoría landing page has a spiral galaxy in the background, slowly rotating behind all the content. It uses no WebGL and no libraries: just a 2D `canvas` and about 200 lines in an Astro component. Unlike the 3D hero on this portfolio, the challenge here wasn't loading an engine without getting in the way, but animating a few thousand points every frame without the background becoming the problem. These are the decisions that make it cheap and predictable.
+
+## Stateless stars: position is a function of time
+
+In a typical particle system you update positions every frame: `x += vx * dt`. Not here. Each star stores only its polar parameters (radius, initial angle, depth, size, brightness), and its position is **computed** from the timestamp `requestAnimationFrame` provides.
+
+```ts
+for (const s of stars) {
+  // Differential rotation: the core spins faster than the edges.
+  const angle = s.a + time * 0.000014 / (0.25 + s.r);
+  const dist = s.r * diag;                       // r is relative to the diagonal
+  const ex = Math.cos(angle) * dist;
+  const ey = Math.sin(angle) * dist * SQUASH;    // disk seen edge-on: an ellipse
+  const x = cx + ex * cos - ey * sin;            // tilt the disk
+  let y = cy + ex * sin + ey * cos - scroll * (0.02 + s.depth * 0.06);
+  y = ((y % (h + 40)) + h + 40) % (h + 40) - 20; // parallax wraps around
+  if (x < -4 || x > w + 4) continue;             // off screen: skip
+  // ...paint
+}
+```
+
+That brings several advantages:
+
+- **No drift.** Rounding errors don't accumulate, and nothing gets out of sync when frames are dropped.
+- **Any instant can be drawn.** The no-motion mode is literally `draw(0)`.
+- **Differential rotation comes for free.** Angular speed depends on radius (`1 / (0.25 + r)`), so the core spins faster than the arms and the spiral winds itself up over time.
+
+Scroll parallax is also just a formula: each star shifts according to its depth. So there's never a gap without sky, `y` wraps around with a modulo. Watch out with that modulo: in JavaScript `%` keeps the sign, and `-30 % 100` is `-30`. The `((y % m) + m) % m` trick always brings it into the positive range.
+
+## Relative units and count by area
+
+The stars are generated once, with the radius relative to the screen diagonal. That way a `resize` only recalculates the canvas size and doesn't reshuffle the sky. This matters on mobile: when you scroll, the browser's address bar shows and hides, the window height changes, and if you regenerated the stars everything would jump.
+
+The count depends on the `screen` area, not the window, for the same reason: it doesn't change on resize. There are three populations, each with a cap: loose stars across the whole sky (up to 500), stars along the spiral arms (up to 900), and fine dust hugging the arms (up to 2400), which is what actually draws the shape. A phone paints far fewer than a large monitor.
+
+## Painting cheaply
+
+- **`devicePixelRatio` capped at 2.** The canvas is rescaled with a single `setTransform` per `resize`, and all drawing works in CSS pixels.
+- **Rectangles for the small stuff.** Stars under 1.1 px and all the dust are painted with `fillRect`, which doesn't build any *path*. Only the big ones use `arc`, and only the biggest get a halo.
+- **Skip what isn't visible.** A star outside the visible width isn't painted.
+- **Debounced `resize`** at 120 ms, so the canvas isn't resized dozens of times while you drag the window.
+
+There's one cost I accepted: every star builds its `fillStyle` as a string every frame. If that ever becomes heavy, the next step would be to bucket stars into a few color and opacity levels and set the style once per bucket.
+
+## Colors come from the theme
+
+The galaxy has to look right in both light and dark themes, and the colors live in CSS, not JavaScript. The variables store the bare channels (`--star: 255 255 255`), so the script can build `rgb(255 255 255 / 0.4)` with whatever opacity it needs.
+
+```ts
+const readColors = () => {
+  const css = getComputedStyle(document.documentElement);
+  color = {
+    star: css.getPropertyValue('--star').trim() || color.star,       // "255 255 255"
+    accent: css.getPropertyValue('--star-accent').trim() || color.accent,
+    alpha: Number(css.getPropertyValue('--star-alpha')) || color.alpha,
+  };
+};
+
+// The theme changes via the toggle (data-theme) or the system.
+new MutationObserver(() => { readColors(); if (reduce.matches) draw(0); })
+  .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+```
+
+Calling `getComputedStyle` every frame would be expensive, so it's read once at startup and only re-read when the theme changes: through a `MutationObserver` on `data-theme` and by listening to `prefers-color-scheme`. If the canvas is static (no-motion mode), that single frame is repainted with the new colors.
+
+## Reduced motion and hidden tabs
+
+```ts
+const start = () => {
+  cancelAnimationFrame(frame);
+  if (reduce.matches) draw(0);              // a single still frame
+  else frame = requestAnimationFrame(loop);
+};
+reduce.addEventListener('change', start);   // reacts without a reload
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cancelAnimationFrame(frame);
+  else start();
+});
+```
+
+With `prefers-reduced-motion` the galaxy doesn't disappear, it holds still: the background looks the same, just without animation. Since I listen to the media query's `change` event, if someone turns the preference on with the page open, the loop stops right then. And although the browser already pauses `requestAnimationFrame` in hidden tabs, I cancel the loop explicitly and resume it with `start()`, which checks the preference again.
+
+The container has `aria-hidden="true"` and `pointer-events: none`: it's decoration and shouldn't get in the way of screen readers or clicks.
+
+## What it doesn't solve
+
+Being a fixed, full-page background, it's always visible, so pausing it with `IntersectionObserver` like I did with the 3D hero makes no sense. As long as the tab is open and visible, every frame is painted. On very modest devices, one option would be to drop to half the frame rate or paint less dust; it doesn't do that today.
+
+How the galaxy fits with the rest of the page (the sales narrative, the calculator, and the SEO) is in the [Orion Consultoría case study](/en/projects/orion-consultoria/).

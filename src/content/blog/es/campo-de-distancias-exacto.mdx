@@ -1,0 +1,97 @@
+---
+title: 'Distancias exactas en una rejilla 3D, en tiempo lineal'
+description: 'La transformada de distancia de Felzenszwalb explicada con el código de Vaciado: parábolas, ejes separables y cómo el campo modela el molde.'
+date: 2026-11-18
+tags: ['algoritmos', '3d', 'typescript']
+---
+
+En el modo *contorno* de Vaciado, el molde es una carcasa que sigue la forma de la figura con un grosor constante. Para construirla necesito saber, para cada punto de una rejilla 3D alrededor del modelo, a qué distancia está de la figura. Ese campo de distancias también sirve para la pestaña de unión entre mitades y para colocar el bebedero y los respiraderos. En este post explico cómo lo calculo de forma exacta y en tiempo lineal.
+
+## Por qué no la versión obvia
+
+El modelo ya está voxelizado: tengo un arreglo `inside` que marca qué nodos de la rejilla caen dentro de la figura. La forma ingenua de calcular la distancia es, para cada nodo de afuera, buscar el nodo de adentro más cercano. Eso es cuadrático en el número de nodos, y una rejilla de 200 × 200 × 200 ya tiene ocho millones.
+
+La alternativa típica es propagar distancias por vecinos (una BFS o una transformada *chamfer*). Es rápida, pero aproximada: el "círculo" de distancia constante sale como un rombo o un octágono, y una carcasa construida así tendría grosor distinto en diagonal que en los ejes.
+
+La transformada de Felzenszwalb y Huttenlocher da la distancia euclídea **exacta** (al cuadrado) en tiempo lineal. Se apoya en dos ideas.
+
+## Idea 1: separar por ejes
+
+La distancia al cuadrado entre dos nodos es `dx² + dy² + dz²`. Como es una suma de términos independientes, el mínimo en 3D se puede calcular en tres pasadas de 1D:
+
+1. Para cada fila en X, calcula la distancia al cuadrado al nodo interior más cercano **de esa fila**.
+2. Sobre ese resultado, para cada columna en Y, minimiza `(j − j')² + resultadoX(j')`. Ahora cada nodo tiene la distancia al más cercano de su plano.
+3. Repite en Z y tienes la distancia en todo el volumen.
+
+```ts
+// 0 dentro del modelo, "infinito" fuera
+for (let i = 0; i < inside.length; i++) sq[i] = inside[i] ? 0 : INF;
+
+const pass = (len: number, stride: number, starts: number[]) => {
+  for (const s0 of starts) {
+    for (let q = 0; q < len; q++) f[q] = sq[s0 + q * stride]; // copiar la línea
+    edt1d(f, len, d, v, z);
+    for (let q = 0; q < len; q++) sq[s0 + q * stride] = d[q]; // y devolverla
+  }
+};
+pass(nx, 1, startsX);       // filas en X
+pass(ny, nx, startsY);      // columnas en Y
+pass(nz, nx * ny, startsZ); // pilas en Z
+```
+
+Copiar cada línea a un buffer contiguo tiene dos ventajas: `edt1d` necesita entrada y salida separadas, y las pasadas en Y y Z, que saltan mucho en memoria, solo recorren el arreglo grande dos veces por línea. Los buffers se crean una vez con el tamaño del eje más largo.
+
+## Idea 2: la envolvente inferior de parábolas
+
+Queda el problema en una dimensión: para cada posición `q`, encontrar el mínimo sobre todas las `p` de `(q − p)² + f(p)`. Si lo dibujas, cada `p` es una parábola con vértice en `(p, f(p))`, todas con la misma forma. La respuesta es la envolvente inferior: la curva que va por debajo de todas.
+
+Como las parábolas son iguales salvo por su posición, dos de ellas se cruzan en un solo punto, y ese punto tiene fórmula cerrada. El algoritmo recorre las parábolas de izquierda a derecha y mantiene una pila con las que forman la envolvente (`v`) y la frontera donde cada una empieza a ganar (`z`). Al llegar una nueva, calcula dónde cruza con la última de la pila; si ese cruce queda a la izquierda de donde la última empezaba a ganar, la última nunca es mínima y se saca.
+
+```ts
+function edt1d(f: Float64Array, n: number, d: Float64Array, v: Int32Array, z: Float64Array) {
+  const cross = (q: number, p: number) => (f[q] + q * q - (f[p] + p * p)) / (2 * q - 2 * p);
+  let k = 0;
+  v[0] = 0; z[0] = -INF; z[1] = INF;
+  for (let q = 1; q < n; q++) {
+    let s = cross(q, v[k]);
+    while (s <= z[k]) { k--; s = cross(q, v[k]); } // la de arriba ya no aporta
+    k++;
+    v[k] = q; z[k] = s; z[k + 1] = INF;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) {
+    while (z[k + 1] < q) k++;           // qué parábola cubre a q
+    d[q] = (q - v[k]) ** 2 + f[v[k]];
+  }
+}
+```
+
+Cada parábola entra y sale de la pila a lo más una vez, así que la pasada es lineal. Tres pasadas lineales dan un total lineal en el número de nodos.
+
+Una trampa: `INF` es `1e20` y no `Infinity`. Si dos nodos lejanos valieran `Infinity`, la fórmula del cruce haría `Infinity − Infinity`, que es `NaN`, y la comparación del `while` dejaría de funcionar. Con un número grande pero finito, la resta da cero y todo sigue en orden.
+
+## De distancia a carcasa
+
+El resultado está en vóxeles al cuadrado. Lo convierto a milímetros con la raíz por el tamaño del vóxel, le resto medio vóxel (el nodo interior más cercano está, en promedio, medio paso más adentro que la superficie real) y lo dejo en cero dentro del modelo. Después aplico un suavizado separable `[1 2 1] / 4` para quitar el escalonado de los vóxeles.
+
+Con ese campo, la geometría del molde se describe con operaciones de mínimo y máximo, como en el modelado con funciones de distancia: el sólido es donde el campo es negativo, `min` es una unión y `max` es una intersección.
+
+```ts
+const d = smooth[idx];   // distancia suavizada a la figura (mm)
+const c = coord[a];      // coordenada en el eje del plano de partición
+let fv = Math.min(
+  d - wall,                                          // carcasa de grosor constante
+  Math.max(d - reach, Math.abs(c - plane) - flangeT) // pestaña: losa junto al plano
+);
+half[idx] = Math.max(fv, sign * (c - plane));         // quedarse con un lado del plano
+```
+
+Surface Nets extrae la superficie donde ese campo vale cero, y luego Manifold le resta la figura exacta para formar la cavidad.
+
+## Costos y límites
+
+- **Memoria.** Un `Float32Array` para las distancias y un `Uint8Array` para `inside`, por nodo. Por eso la rejilla tiene un tope de nodos: si el modelo no cabe, el paso crece un 12 % y se vuelve a intentar.
+- **Resolución.** La carcasa hereda la resolución de la rejilla: un detalle más pequeño que un vóxel no aparece en su contorno exterior. La cavidad no sufre esto, porque se resta con la malla original.
+- **Ya no es una distancia.** Después de combinar con `min` y `max`, el campo conserva el signo correcto pero deja de ser una distancia exacta. Para extraer la superficie cero no importa; para hacer offsets encima de ese resultado, sí.
+
+El resto del pipeline (voxelización con número de vueltas, los dos motores booleanos y la vista previa en dos workers) está en el [caso de estudio de Vaciado](/proyectos/vaciado/).

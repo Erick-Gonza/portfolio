@@ -1,0 +1,92 @@
+---
+title: 'Probar contra Postgres real sin Docker: PGlite y las migraciones de producción'
+description: 'Cómo pruebo los servicios de ventas de un sistema para óptica con Vitest y PGlite: Postgres en memoria, migraciones reales y una base nueva por prueba.'
+date: 2026-11-20
+tags: ['testing', 'postgres', 'drizzle']
+---
+
+En el sistema que hice para una óptica, crear una venta inserta los conceptos, descuenta inventario, registra el anticipo y genera la orden de laboratorio, todo en una transacción. Un error ahí no es un botón mal alineado: es stock que no cuadra o un saldo cobrado dos veces. Quería pruebas que ejercitaran justo eso, y para eso un *mock* de la base no sirve.
+
+## Por qué no un mock, ni SQLite, ni Docker
+
+Un mock de la base te deja probar que llamaste a `insert` con ciertos argumentos, pero no prueba lo que de verdad importa: que el `UPDATE` condicionado no deje stock negativo, que la transacción revierta todo cuando algo falla, que `numeric(12,2)` regrese números y no cadenas, o que el `SELECT ... FOR UPDATE` sea SQL válido.
+
+SQLite en memoria es rápido, pero es otro dialecto: no tiene `numeric` con precisión, ni `FOR UPDATE`, y las migraciones de Postgres no corren ahí. Tendrías que mantener un segundo esquema solo para pruebas.
+
+Un Postgres en Docker (a mano o con Testcontainers) es lo más fiel, pero necesitas Docker en cada máquina y en CI, y el arranque del contenedor se nota.
+
+PGlite es Postgres compilado a WebAssembly. Corre dentro del mismo proceso de Node, sin servidor ni red, y puede vivir completamente en memoria. Es un Postgres de verdad, así que acepta las mismas migraciones.
+
+## La pieza clave: los servicios reciben la base
+
+Esto funciona porque las reglas de negocio no importan una conexión global. Viven en `server/services/` como funciones que reciben la base como primer argumento: `crearVenta(db, datos)`, `registrarPago(db, pago)`. El tipo de ese argumento es el `PgDatabase` genérico de Drizzle, que cubre tres casos: el driver `postgres-js` de producción, una transacción (`tx`) y el driver de PGlite. Así un servicio puede llamar a otro dentro de su transacción, y en las pruebas le paso una base en memoria sin tocar el código.
+
+El helper de pruebas es corto:
+
+```ts
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import * as schema from "@/db/schema";
+
+/** Postgres en memoria (PGlite) con las migraciones reales aplicadas. */
+export async function crearDbPrueba(): Promise<DB> {
+  const client = new PGlite();
+  const db = drizzle({ client, schema, casing: "snake_case" });
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  return db as unknown as DB;
+}
+```
+
+La carpeta `./drizzle` es la misma que aplica el contenedor al desplegar. Eso da una prueba gratis: si una migración no corre desde cero, las pruebas fallan antes de que falle producción.
+
+## Una base nueva por prueba
+
+En el `beforeEach` creo una base nueva y siembro lo mínimo: un paciente, un armazón con stock 3 y una mica que no controla inventario. Cada prueba empieza en un estado conocido, no hay que limpiar tablas, y el orden de las pruebas da igual.
+
+El costo es que cada prueba paga el arranque de PGlite y las migraciones. Con un esquema chico es aceptable, y el `testTimeout` de Vitest está en 30 segundos para dar margen. Si el esquema creciera mucho, el siguiente paso sería migrar una sola vez y reutilizar una copia de la base para cada prueba.
+
+## Qué vale la pena probar ahí
+
+Lo más valioso son las reglas que dependen de la base. Por ejemplo, el inventario se descuenta con un `UPDATE` que solo aplica si alcanza el stock:
+
+```ts
+const [actualizado] = await db
+  .update(productos)
+  .set({ stock: sql`${productos.stock} + ${m.cantidad}` })
+  .where(and(
+    eq(productos.id, m.productoId),
+    m.cantidad < 0 ? gte(productos.stock, -m.cantidad) : undefined,
+  ))
+  .returning({ stock: productos.stock });
+
+if (!actualizado) throw new ErrorNegocio("Stock insuficiente ...");
+```
+
+No hay "leer, comparar y escribir" desde la aplicación: la condición va en el mismo `UPDATE`, así que dos ventas simultáneas no pueden dejar el stock en menos de cero. Si ninguna fila cambió, no había suficiente. La prueba que más me importa es la que verifica que, cuando eso pasa a mitad de una venta, no queda nada a medias:
+
+```ts
+it("revierte todo si no hay stock suficiente", async () => {
+  const sinStock = venta({
+    items: [{ productoId: armazonId, descripcion: "Armazón", cantidad: 5, precioUnitario: 1500, descuento: 0 }],
+    anticipo: 0,
+    descuento: 0,
+  });
+  await expect(crearVenta(db, sinStock)).rejects.toThrow(/Stock insuficiente/);
+  expect(await db.select().from(ventas)).toHaveLength(0); // no quedó una venta a medias
+  expect(await stock(armazonId)).toBe(3);                  // ni stock descontado
+});
+```
+
+Si algún día alguien mueve un `insert` fuera de la transacción, esta prueba lo detecta. Con el mismo patrón están cubiertos los abonos que no permiten pagar de más, la cancelación que regresa el inventario y reembolsa por método de pago, las transiciones válidas de la orden de laboratorio y el corte de caja con su diferencia.
+
+## Lo que PGlite no prueba
+
+- **Concurrencia.** PGlite atiende una sola conexión. `FOR UPDATE` se ejecuta, pero no bloquea a nadie porque no hay nadie más. Las carreras reales entre dos peticiones solo se reproducen con un Postgres con varias conexiones.
+- **Diferencias de driver.** En producción uso `postgres-js` y en pruebas el driver de PGlite. Mientras pases por las columnas de Drizzle, el mapeo de tipos es el mismo. Pero un agregado escrito con `sql` no pasa por ese mapeo: un `sum()` sobre `numeric` llega como cadena con `postgres-js`, por eso lo tipo como `sql<string>` y lo convierto con `Number()` de forma explícita.
+- **Versión y extensiones.** PGlite sigue una versión concreta de Postgres y no trae todas las extensiones. Si usas alguna, revisa que exista en los dos lados.
+- **Zona horaria.** El servidor corre en UTC y la óptica en `America/Mexico_City`. Las pruebas de caja usan el mismo helper de fecha local que el código, para no depender de la hora a la que corran.
+
+Aun con esos límites, es la mejor relación costo-confianza que he encontrado: SQL real, sin infraestructura extra y con las mismas migraciones que producción.
+
+Los módulos del sistema y cómo se despliega están en el [caso de estudio](/proyectos/sistema-optica/).

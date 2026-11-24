@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import Layout from '../../layouts/Layout.astro';
 import SectionHead from '../SectionHead.astro';
 import Contact from '../Contact.astro';
+import PrincipleVisual from '../PrincipleVisual.astro';
 import { ruta, t, type Lang } from '../../i18n/ui';
 import { persona } from '../../data/sitio';
 
@@ -17,6 +18,7 @@ const cv = persona.cv[lang];
 const hayCv = fs.existsSync(`${process.cwd()}/public${cv}`);
 
 const es = lang === 'es';
+const anios = new Date().getFullYear() - persona.desde;
 
 const bloques = es
   ? [
@@ -56,43 +58,52 @@ const principios = es
           es ? (
             <>
               <p class="text-xl text-fg">
-                Soy desarrollador full-stack en {persona.ciudad} y trabajo en esto desde {persona.desde}. Construyo
-                productos completos: el modelo de datos, las reglas de negocio, la interfaz y el servidor donde corren.
+                Soy desarrollador full-stack con {anios} años de experiencia profesional (desde {persona.desde}).
+                Actualmente trabajo como <strong>{persona.trabajo.puesto}</strong> en{' '}
+                <strong>{persona.trabajo.empresa}</strong>, en {persona.trabajo.ciudad}.
               </p>
               <p>
-                Mi trabajo va de sistemas para negocios (una app de dietocálculo para nutriólogos, un sistema de gestión
-                para ópticas) a herramientas con mucha geometría, como un generador de moldes 3D que corre en el
-                navegador, y un MMORPG espacial con servidores autoritativos en Unity y .NET.
+                Mi fuerte es llevar una funcionalidad de punta a punta: modelo de datos, API, interfaz, pruebas y
+                despliegue. En frontend trabajo con TypeScript, React y Next.js; en backend con Node.js, C#/.NET y
+                PostgreSQL; y en infraestructura con Docker, AWS y Google Cloud.
               </p>
               <p>
-                Desde{' '}
+                Me importa que el código se pueda mantener y que no rompa datos: pruebas contra bases reales,
+                transacciones donde hay dinero de por medio, documentación clara y revisiones de código. Uso agentes de IA
+                a diario en mi flujo de desarrollo, con criterio para revisar y probar lo que generan.
+              </p>
+              <p>
+                Fuera de mi empleo construyo productos propios, de sistemas para negocios a un videojuego multijugador,
+                y dirijo{' '}
                 <a href={persona.empresa.url} target="_blank" rel="noopener">
                   {persona.empresa.nombre}
-                </a>{' '}
-                hago software e IA a la medida para negocios. Trabajo con agentes de código como parte normal de mi
-                flujo, y eso me deja dedicar más tiempo a lo que importa: entender el problema y que el resultado
-                funcione.
+                </a>
+                , donde hago consultoría de software e IA.
               </p>
             </>
           ) : (
             <>
               <p class="text-xl text-fg">
-                I'm a full-stack developer in {persona.ciudad}, working professionally since {persona.desde}. I build
-                complete products: the data model, the business rules, the interface and the server they run on.
+                I'm a full-stack developer with {anios} years of professional experience (since {persona.desde}).
+                I currently work as a <strong>{persona.trabajo.puesto}</strong> at{' '}
+                <strong>{persona.trabajo.empresa}</strong>, in {persona.trabajo.ciudad}.
               </p>
               <p>
-                My work ranges from business software (a diet-planning app for nutritionists, a management system for
-                optical stores) to geometry-heavy tools, like a 3D mold generator that runs in the browser, and a space
-                MMORPG with authoritative servers in Unity and .NET.
+                My strength is taking a feature end to end: data model, API, interface, tests and deployment. On the
+                frontend I work with TypeScript, React and Next.js; on the backend with Node.js, C#/.NET and PostgreSQL;
+                and on infrastructure with Docker, AWS and Google Cloud.
               </p>
               <p>
-                Through{' '}
+                I care about code that stays maintainable and never corrupts data: tests against real databases,
+                transactions wherever money is involved, clear documentation and code reviews. I use AI coding agents
+                every day, with the judgment to review and test what they produce.
+              </p>
+              <p>
+                Outside my job I build my own products, from business software to a multiplayer game, and I run{' '}
                 <a href={persona.empresa.url} target="_blank" rel="noopener">
                   {persona.empresa.nombre}
-                </a>{' '}
-                I build custom software and AI for businesses. I work with coding agents as a normal part of my
-                workflow, which frees me to spend more time on what matters: understanding the problem and making sure
-                the result works.
+                </a>
+                , where I do software and AI consulting.
               </p>
             </>
           )
@@ -100,6 +111,16 @@ const principios = es
         {/* PREGUNTA: formación y trabajos anteriores, para el CV. */}
       </div>
       <aside class="flex flex-col gap-3 self-start" data-reveal style="--d:.1s">
+        <div class="rounded-2xl border border-accent/40 bg-accent/5 p-5">
+          <p class="label flex items-center gap-2">
+            <span class="relative flex size-2"><span class="absolute inline-flex size-full animate-ping rounded-full bg-accent-2 opacity-60"></span><span class="relative inline-flex size-2 rounded-full bg-accent-2"></span></span>
+            {tr('about.job')}
+          </p>
+          <p class="mt-3 font-display text-2xl font-bold tracking-tight">{persona.trabajo.puesto}</p>
+          <p class="mt-1 text-fg/80">
+            {es ? 'en' : 'at'} <strong class="font-semibold text-fg">{persona.trabajo.empresa}</strong> · {persona.trabajo.ciudad}
+          </p>
+        </div>
         {
           hayCv && (
             <a href={cv} class="btn btn-primary" download data-umami-event="descargar-cv" data-umami-event-idioma={lang}>
@@ -114,8 +135,8 @@ const principios = es
           <p class="mt-3 text-sm text-fg/80">
             {
               es
-                ? 'Llevando Orion Galaxy a su siguiente versión y aceptando proyectos nuevos de webs y sistemas.'
-                : 'Taking Orion Galaxy to its next release and taking on new website and software projects.'
+                ? 'En mis tiempos libres: llevando Orion Galaxy a su siguiente versión y tomando proyectos de webs y sistemas.'
+                : 'On the side: taking Orion Galaxy to its next release and taking on website and software projects.'
             }
           </p>
         </div>
@@ -127,9 +148,12 @@ const principios = es
     <div class="grid gap-px overflow-hidden rounded-3xl border border-line bg-line md:grid-cols-3">
       {
         principios.map(([titulo, texto], i) => (
-          <div class="bg-bg p-6 md:p-8" data-reveal style={`--d:${i * 0.08}s`}>
+          <div class="group bg-bg p-6 transition-colors hover:bg-bg-2 md:p-8" data-reveal style={`--d:${i * 0.08}s`}>
             <span class="font-mono text-xs text-accent">0{i + 1}</span>
-            <h2 class="mt-8 font-display text-2xl font-bold tracking-tight">{titulo}</h2>
+            <div class="mt-4">
+              <PrincipleVisual tipo={(['producto', 'datos', 'movil'] as const)[i]} />
+            </div>
+            <h2 class="mt-6 font-display text-2xl font-bold tracking-tight">{titulo}</h2>
             <p class="mt-3 text-fg/70">{texto}</p>
           </div>
         ))

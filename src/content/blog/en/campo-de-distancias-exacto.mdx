@@ -1,0 +1,97 @@
+---
+title: 'Exact distances on a 3D grid, in linear time'
+description: "Felzenszwalb's distance transform explained with Vaciado's code: parabolas, separable axes, and how the field shapes the mold."
+date: 2026-11-18
+tags: ['algorithms', '3d', 'typescript']
+---
+
+In Vaciado's *contour* mode, the mold is a shell that follows the figure's shape at a constant thickness. To build it I need to know, for every point on a 3D grid around the model, how far it is from the figure. That distance field also drives the flange where the two halves meet and the placement of the sprue and vents. In this post I explain how I compute it exactly and in linear time.
+
+## Why not the obvious version
+
+The model is already voxelized: I have an `inside` array that marks which grid nodes fall inside the figure. The naive way to get distances is, for every outside node, to search for the nearest inside node. That's quadratic in the number of nodes, and a 200 × 200 × 200 grid already has eight million.
+
+The usual alternative is to propagate distances through neighbors (a BFS or a *chamfer* transform). It's fast, but approximate: the "circle" of constant distance comes out as a diamond or an octagon, and a shell built that way would be thicker along the diagonals than along the axes.
+
+The Felzenszwalb and Huttenlocher transform gives the **exact** (squared) Euclidean distance in linear time. It rests on two ideas.
+
+## Idea 1: split by axis
+
+The squared distance between two nodes is `dx² + dy² + dz²`. Since it's a sum of independent terms, the 3D minimum can be computed in three 1D passes:
+
+1. For each row along X, compute the squared distance to the nearest inside node **in that row**.
+2. On that result, for each column along Y, minimize `(j − j')² + resultX(j')`. Now each node holds the distance to the nearest one in its plane.
+3. Repeat along Z and you have the distance in the whole volume.
+
+```ts
+// 0 inside the model, "infinity" outside
+for (let i = 0; i < inside.length; i++) sq[i] = inside[i] ? 0 : INF;
+
+const pass = (len: number, stride: number, starts: number[]) => {
+  for (const s0 of starts) {
+    for (let q = 0; q < len; q++) f[q] = sq[s0 + q * stride]; // copy the line out
+    edt1d(f, len, d, v, z);
+    for (let q = 0; q < len; q++) sq[s0 + q * stride] = d[q]; // and write it back
+  }
+};
+pass(nx, 1, startsX);       // rows along X
+pass(ny, nx, startsY);      // columns along Y
+pass(nz, nx * ny, startsZ); // stacks along Z
+```
+
+Copying each line into a contiguous buffer has two benefits: `edt1d` needs separate input and output, and the Y and Z passes, which jump around in memory, only walk the big array twice per line. The buffers are allocated once, sized to the longest axis.
+
+## Idea 2: the lower envelope of parabolas
+
+That leaves the 1D problem: for each position `q`, find the minimum over all `p` of `(q − p)² + f(p)`. If you plot it, each `p` is a parabola with its vertex at `(p, f(p))`, all with the same shape. The answer is the lower envelope: the curve that runs below all of them.
+
+Because the parabolas are identical except for position, any two cross at exactly one point, and that point has a closed-form formula. The algorithm sweeps the parabolas left to right and keeps a stack of the ones that make up the envelope (`v`) and the boundary where each one starts winning (`z`). When a new one arrives, it computes where it crosses the top of the stack; if that crossing lies to the left of where the top started winning, the top is never the minimum and gets popped.
+
+```ts
+function edt1d(f: Float64Array, n: number, d: Float64Array, v: Int32Array, z: Float64Array) {
+  const cross = (q: number, p: number) => (f[q] + q * q - (f[p] + p * p)) / (2 * q - 2 * p);
+  let k = 0;
+  v[0] = 0; z[0] = -INF; z[1] = INF;
+  for (let q = 1; q < n; q++) {
+    let s = cross(q, v[k]);
+    while (s <= z[k]) { k--; s = cross(q, v[k]); } // the top no longer contributes
+    k++;
+    v[k] = q; z[k] = s; z[k + 1] = INF;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) {
+    while (z[k + 1] < q) k++;           // which parabola covers q
+    d[q] = (q - v[k]) ** 2 + f[v[k]];
+  }
+}
+```
+
+Each parabola enters and leaves the stack at most once, so the pass is linear. Three linear passes add up to linear time in the number of nodes.
+
+One pitfall: `INF` is `1e20`, not `Infinity`. If two far-away nodes were `Infinity`, the crossing formula would compute `Infinity − Infinity`, which is `NaN`, and the `while` comparison would stop working. With a large but finite number, the subtraction yields zero and everything stays in order.
+
+## From distance to shell
+
+The result is in squared voxels. I convert it to millimeters with the square root times the voxel size, subtract half a voxel (the real surface sits, on average, half a step away from the nearest inside node), and leave it at zero inside the model. Then I apply a separable `[1 2 1] / 4` blur to remove the voxel staircase.
+
+With that field, the mold's geometry is described with min and max operations, as in modeling with distance functions: the solid is where the field is negative, `min` is a union, and `max` is an intersection.
+
+```ts
+const d = smooth[idx];   // smoothed distance to the figure (mm)
+const c = coord[a];      // coordinate along the parting plane's axis
+let fv = Math.min(
+  d - wall,                                          // constant-thickness shell
+  Math.max(d - reach, Math.abs(c - plane) - flangeT) // flange: slab along the plane
+);
+half[idx] = Math.max(fv, sign * (c - plane));         // keep one side of the plane
+```
+
+Surface Nets extracts the surface where that field is zero, and then Manifold subtracts the exact figure to form the cavity.
+
+## Costs and limits
+
+- **Memory.** A `Float32Array` for distances and a `Uint8Array` for `inside`, per node. That's why the grid has a node cap: if the model doesn't fit, the step grows by 12% and it tries again.
+- **Resolution.** The shell inherits the grid's resolution: a detail smaller than a voxel won't show up in its outer contour. The cavity doesn't suffer from this, because it's subtracted using the original mesh.
+- **It's no longer a distance.** After combining with `min` and `max`, the field keeps the correct sign but stops being an exact distance. For extracting the zero surface that doesn't matter; for offsetting that result further, it does.
+
+The rest of the pipeline (winding-number voxelization, the two boolean engines, and the two-worker preview) is in the [Vaciado case study](/en/projects/vaciado/).

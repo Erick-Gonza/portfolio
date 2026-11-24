@@ -1,0 +1,92 @@
+---
+title: 'Testing against real Postgres without Docker: PGlite and production migrations'
+description: 'How I test the sales services of an optical shop system with Vitest and PGlite: in-memory Postgres, real migrations, and a fresh database per test.'
+date: 2026-11-20
+tags: ['testing', 'postgres', 'drizzle']
+---
+
+In the system I built for an optical shop, creating a sale inserts the line items, deducts inventory, records the down payment, and creates the lab order, all in one transaction. A bug there isn't a misaligned button: it's stock that doesn't add up or a balance charged twice. I wanted tests that exercise exactly that, and a database *mock* doesn't cut it.
+
+## Why not a mock, SQLite, or Docker
+
+A database mock lets you test that you called `insert` with certain arguments, but it doesn't test what actually matters: that the conditional `UPDATE` never leaves negative stock, that the transaction rolls everything back when something fails, that `numeric(12,2)` comes back as numbers and not strings, or that `SELECT ... FOR UPDATE` is valid SQL.
+
+In-memory SQLite is fast, but it's another dialect: it has no fixed-precision `numeric` and no `FOR UPDATE`, and Postgres migrations won't run on it. You'd have to maintain a second schema just for tests.
+
+Postgres in Docker (by hand or with Testcontainers) is the most faithful, but you need Docker on every machine and in CI, and container startup is noticeable.
+
+PGlite is Postgres compiled to WebAssembly. It runs inside the same Node process, with no server or network, and can live entirely in memory. It's real Postgres, so it accepts the same migrations.
+
+## The key piece: services receive the database
+
+This works because the business rules don't import a global connection. They live in `server/services/` as functions that take the database as their first argument: `crearVenta(db, data)`, `registrarPago(db, payment)`. The type of that argument is Drizzle's generic `PgDatabase`, which covers three cases: the production `postgres-js` driver, a transaction (`tx`), and the PGlite driver. That way one service can call another inside its transaction, and in tests I pass an in-memory database without touching the code.
+
+The test helper is short:
+
+```ts
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import * as schema from "@/db/schema";
+
+/** In-memory Postgres (PGlite) with the real migrations applied. */
+export async function crearDbPrueba(): Promise<DB> {
+  const client = new PGlite();
+  const db = drizzle({ client, schema, casing: "snake_case" });
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  return db as unknown as DB;
+}
+```
+
+The `./drizzle` folder is the same one the container applies on deploy. That gives you a free test: if a migration doesn't run from scratch, the tests fail before production does.
+
+## A fresh database per test
+
+In `beforeEach` I create a new database and seed the bare minimum: a patient, a frame with stock 3, and a lens that doesn't track inventory. Every test starts from a known state, there are no tables to clean, and test order doesn't matter.
+
+The cost is that every test pays for PGlite's startup and the migrations. With a small schema that's acceptable, and Vitest's `testTimeout` is set to 30 seconds to leave room. If the schema grew a lot, the next step would be to migrate once and reuse a copy of the database for each test.
+
+## What's worth testing there
+
+The most valuable tests cover rules that depend on the database. For example, inventory is deducted with an `UPDATE` that only applies if there's enough stock:
+
+```ts
+const [updated] = await db
+  .update(productos)
+  .set({ stock: sql`${productos.stock} + ${m.cantidad}` })
+  .where(and(
+    eq(productos.id, m.productoId),
+    m.cantidad < 0 ? gte(productos.stock, -m.cantidad) : undefined,
+  ))
+  .returning({ stock: productos.stock });
+
+if (!updated) throw new ErrorNegocio("Insufficient stock ...");
+```
+
+There's no "read, compare, write" from the application: the condition lives in the same `UPDATE`, so two simultaneous sales can't push stock below zero. If no row changed, there wasn't enough. The test I care about most checks that, when this happens halfway through a sale, nothing is left half-done:
+
+```ts
+it("rolls everything back when stock is insufficient", async () => {
+  const noStock = venta({
+    items: [{ productoId: armazonId, descripcion: "Frame", cantidad: 5, precioUnitario: 1500, descuento: 0 }],
+    anticipo: 0,
+    descuento: 0,
+  });
+  await expect(crearVenta(db, noStock)).rejects.toThrow(/Stock insuficiente/);
+  expect(await db.select().from(ventas)).toHaveLength(0); // no half-created sale
+  expect(await stock(armazonId)).toBe(3);                  // and no stock deducted
+});
+```
+
+If someone ever moves an `insert` outside the transaction, this test catches it. The same pattern covers payments that can't exceed the balance, cancellations that restore inventory and refund by payment method, valid lab order transitions, and the cash count with its difference.
+
+## What PGlite doesn't test
+
+- **Concurrency.** PGlite serves a single connection. `FOR UPDATE` runs, but it doesn't block anyone because there's nobody else. Real races between two requests only reproduce on a Postgres with several connections.
+- **Driver differences.** Production uses `postgres-js` and tests use the PGlite driver. As long as you go through Drizzle's columns, type mapping is the same. But an aggregate written with `sql` skips that mapping: a `sum()` over `numeric` arrives as a string with `postgres-js`, which is why I type it as `sql<string>` and convert it explicitly with `Number()`.
+- **Version and extensions.** PGlite tracks a specific Postgres version and doesn't ship every extension. If you use one, check that it exists on both sides.
+- **Time zone.** The server runs in UTC and the shop in `America/Mexico_City`. The cash register tests use the same local-date helper as the code, so they don't depend on what time they run.
+
+Even with those limits, it's the best cost-to-confidence ratio I've found: real SQL, no extra infrastructure, and the same migrations as production.
+
+The system's modules and how it's deployed are in the [case study](/en/projects/sistema-optica/).

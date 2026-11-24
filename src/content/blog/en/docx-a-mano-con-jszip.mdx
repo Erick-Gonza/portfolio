@@ -1,0 +1,110 @@
+---
+title: 'A .docx by hand: Word is a zip of XML'
+description: 'How Equivale builds the meal plan as a Word file in the browser without a Word library: three XML files packaged with JSZip.'
+date: 2026-11-16
+tags: ['javascript', 'docx']
+---
+
+Equivale exports the meal plan to PDF, Excel, and Word. For PDF I use jsPDF and for Excel SheetJS, but for Word I didn't want to pull in a full library: the document only has headings, paragraphs, and tables. It turns out a `.docx` is much simpler than it looks, and building one by hand takes about twenty lines.
+
+## A .docx is a zip
+
+If you rename any `.docx` to `.zip` and open it, you'll find a folder of XML files. The format is called Office Open XML, and the packaging follows a convention called OPC: a zip with "parts" (files) and "relationships" between them.
+
+Word saves many parts (styles, themes, fonts, settings), but to open a valid document you only need three:
+
+- `[Content_Types].xml`: the MIME type of each part.
+- `_rels/.rels`: the relationship that points to the main document.
+- `word/document.xml`: the content.
+
+Without `styles.xml`, Word falls back to its default styles, and for a printed plan that's enough.
+
+```js
+const zip = new JSZip();
+zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml"
+    ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Target="word/document.xml"
+    Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"/>
+</Relationships>`);
+zip.file('word/document.xml', docXml);
+const blob = await zip.generateAsync({ type: 'blob',
+  mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+```
+
+One detail that silently breaks files: the `<?xml ...?>` declaration must be the very first thing in the file. If your template literal starts with a line break, the XML is no longer valid.
+
+## The WordprocessingML model
+
+The content of `document.xml` follows a short hierarchy:
+
+- `w:body` holds paragraphs (`w:p`) and tables (`w:tbl`).
+- A paragraph holds *runs* (`w:r`): stretches of text with the same formatting.
+- A run holds the text (`w:t`).
+
+Paragraph formatting (spacing, alignment) goes in `w:pPr`, and character formatting (bold, size, color) in `w:rPr`. With that I wrote a helper that produces a paragraph with a single run:
+
+```js
+const xmlEsc = (s) => String(s ?? '').replace(/[&<>"]/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function wP(text, o = {}) {
+  const rpr = (o.b ? '<w:b/>' : '')
+    + (o.sz ? `<w:sz w:val="${o.sz}"/>` : '')          // half-points: 36 = 18 pt
+    + (o.color ? `<w:color w:val="${o.color}"/>` : ''); // hex without #
+  return `<w:p><w:pPr><w:spacing w:before="${o.before || 0}" w:after="${o.after ?? 120}"/></w:pPr>`
+    + `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ''}`
+    + `<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
+}
+
+// wP('Meal plan', { b: true, sz: 36, after: 60 })
+```
+
+`xml:space="preserve"` keeps Word from swallowing spaces at the start or end of the text.
+
+## Units, which is where you get lost
+
+WordprocessingML uses different units depending on the attribute, and if you don't know them the numbers look arbitrary:
+
+- **Font size** (`w:sz`): half-points. `24` is 12 pt.
+- **Spacing, margins, and page size**: twentieths of a point, called *twips*. One inch is 1440. That's why a US Letter page is `12240 × 15840` and a `1080` margin is three quarters of an inch.
+- **Table width as a percentage** (`w:type="pct"`): fiftieths of a percent. `5000` is 100%.
+
+Page size and margins go in a `w:sectPr` at the end of `w:body`.
+
+## Tables
+
+A table is a `w:tbl` with its properties (`w:tblPr`: width and borders), a column grid (`w:tblGrid`), and `w:tr` rows with `w:tc` cells. In Equivale I use them for the exchanges per meal and for the menu:
+
+```js
+function wTable(head, rows) {
+  const cw = Math.floor(9360 / head.length); // width per column, in twips
+  const cell = (t, isHead) => `<w:tc><w:tcPr><w:tcW w:w="${cw}" w:type="dxa"/>`
+    + (isHead ? '<w:shd w:val="clear" w:color="auto" w:fill="E0EFE9"/>' : '')
+    + `</w:tcPr>${wP(t, { b: isHead, sz: 18, after: 0 })}</w:tc>`;
+  const row = (r, isHead) => `<w:tr>${r.map((x) => cell(x, isHead)).join('')}</w:tr>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${borders}</w:tblPr>`
+    + `<w:tblGrid>${head.map(() => `<w:gridCol w:w="${cw}"/>`).join('')}</w:tblGrid>`
+    + row(head, true) + rows.map((r) => row(r, false)).join('')
+    + '</w:tbl>' + wP('', { after: 120 });
+}
+```
+
+Two rules worth knowing. Every cell must contain at least one paragraph, even an empty one; a cell without a `w:p` is exactly the kind of mistake that makes Word say the file is corrupt. And after each table I add an empty paragraph: it gives space before the next heading and keeps two consecutive tables from sticking together. The header shading is `w:shd` with a hex `w:fill`.
+
+## Pitfalls and limits
+
+- **Escape everything.** A patient named "Pérez & Sons" or a note with a `<` breaks the XML, and Word refuses to open it. Escaping `&`, `<`, `>`, and `"` covers the usual cases. XML 1.0 also forbids almost all control characters; if the text is pasted from another program, it's worth stripping those too.
+- **A newline isn't a line break.** A `\n` inside `w:t` does nothing visible. I split the plan's recommendations by line and emit one paragraph per line; the alternative is a `w:br` inside the run.
+- **No styles means no real headings.** My headings are bold paragraphs with a large font, so they don't show up in the navigation pane or a table of contents. That takes a `styles.xml` and its relationship. Images, headers, or numbering also add parts and relationships. Once the document needs those, a library starts paying for itself.
+- **Test in several readers.** Word is the strictest; LibreOffice and Google Docs forgive mistakes that Word doesn't.
+
+Since JSZip is only needed when exporting, I load it with a dynamic `import()`: Vite splits it into its own chunk and it adds nothing to the app's initial load.
+
+The rest of Equivale (the exchange calculation, the per-meal distribution, and why everything lives in the browser) is in the [case study](/en/projects/equivale/).

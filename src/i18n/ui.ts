@@ -54,20 +54,23 @@ export const ui = {
 
     'meta.title': 'Erick Gonzalez — Desarrollador web y de software en Monterrey',
     'meta.description':
-      'Diseño y desarrollo apps web, sistemas a medida, experiencias 3D y videojuegos. Desde Monterrey, para negocios en cualquier lugar.',
+      'Desarrollo de software, IA aplicada y consultoría tecnológica para negocios: agentes de IA, sistemas a la medida, webs y 3D. Desde Monterrey, para todo México.',
 
-    'hero.kicker': 'Desarrollador full-stack · 3D · Juegos',
-    'hero.title.1': 'Construyo',
-    'hero.title.2': 'software que',
-    'hero.title.3': 'despega.',
+    'hero.kicker': 'Full-stack · IA · Consultoría · Monterrey',
+    'hero.title.1': 'Erick Gonzalez',
+    'hero.title.2': 'Desarrollador',
+    'hero.title.3': 'de software.',
     'hero.lead':
-      'Apps web, sistemas a la medida para negocios y mundos en tiempo real. Del diseño al servidor, sin intermediarios.',
+      'Sistemas a la medida, agentes de IA y consultoría para que tu negocio automatice lo repetitivo y crezca. Del diagnóstico al servidor, sin intermediarios.',
     'hero.cta': 'Trabajemos juntos',
     'hero.secondary': 'Ver proyectos',
     'hero.hint': 'Mueve el cursor o inclina el teléfono',
 
     'services.label': 'Qué hago',
-    'services.title': 'Tres frentes, un mismo oficio.',
+    'services.title': 'Cuatro frentes, un mismo oficio.',
+    'services.ia.title': 'IA aplicada y automatización',
+    'services.ia.body':
+      'Agentes que atienden por WhatsApp y correo, dan seguimiento y agendan citas. Integrados a tus sistemas, con reglas claras de qué pueden y qué no.',
     'services.web.title': 'Webs y landings',
     'services.web.body':
       'Sitios rápidos, con animación cuando suma y SEO desde el día uno. Pensados primero para el teléfono.',
@@ -77,6 +80,21 @@ export const ui = {
     'services.3d.title': '3D y videojuegos',
     'services.3d.body':
       'Escenas 3D para la web, herramientas con geometría y juegos multijugador con servidor propio.',
+
+    'process.label': 'Consultoría',
+    'process.title': 'Cómo trabajo contigo',
+    'process.lead':
+      'Antes de escribir código entiendo tu negocio. Muchas veces la mejor solución es automatizar un paso, no construir un sistema entero.',
+    'process.1.title': 'Diagnóstico',
+    'process.1.body': 'Una llamada para entender tu operación, qué te quita tiempo y dónde la IA sí ayuda (y dónde no).',
+    'process.2.title': 'Propuesta',
+    'process.2.body': 'Alcance, plazo y costo claros por escrito, antes de empezar. Sin letras chiquitas.',
+    'process.3.title': 'Construcción',
+    'process.3.body': 'Entregas cortas que puedes probar desde la primera semana, con tu equipo dando retroalimentación.',
+    'process.4.title': 'Acompañamiento',
+    'process.4.body': 'Capacitación, ajustes y soporte después de lanzar. El software tiene que funcionar en el día a día.',
+    'process.cta': 'Agenda un diagnóstico',
+    'process.orion': 'Consultoría de IA para empresas en Orion Consultoría',
 
     'projects.label': 'Proyectos',
     'projects.title': 'Trabajo reciente',
@@ -124,6 +142,7 @@ export const ui = {
     'about.cv': 'Descargar CV',
     'about.stack': 'Con qué trabajo',
     'about.now': 'En qué ando',
+    'about.job': 'Actualmente',
 
     'contact.label': 'Contacto',
     'contact.title': '¿Tienes un proyecto en mente?',
@@ -160,20 +179,23 @@ export const ui = {
 
     'meta.title': 'Erick Gonzalez — Web & software developer in Monterrey, Mexico',
     'meta.description':
-      'I design and build web apps, custom business software, 3D experiences and games. Based in Monterrey, working with clients anywhere.',
+      'Software development, applied AI and tech consulting for businesses: AI agents, custom software, websites and 3D. Based in Monterrey, Mexico.',
 
-    'hero.kicker': 'Full-stack developer · 3D · Games',
-    'hero.title.1': 'I build',
-    'hero.title.2': 'software that',
-    'hero.title.3': 'takes off.',
+    'hero.kicker': 'Full-stack · AI · Consulting · Monterrey',
+    'hero.title.1': 'Erick Gonzalez',
+    'hero.title.2': 'Software',
+    'hero.title.3': 'developer.',
     'hero.lead':
-      'Web apps, custom business software and real-time worlds. From design to the server, with no middlemen.',
+      'Custom software, AI agents and consulting so your business automates the repetitive work and grows. From diagnosis to the server, with no middlemen.',
     'hero.cta': "Let's work together",
     'hero.secondary': 'See projects',
     'hero.hint': 'Move your cursor or tilt your phone',
 
     'services.label': 'What I do',
-    'services.title': 'Three fronts, one craft.',
+    'services.title': 'Four fronts, one craft.',
+    'services.ia.title': 'Applied AI & automation',
+    'services.ia.body':
+      'Agents that answer on WhatsApp and email, follow up and book appointments. Connected to your systems, with clear rules on what they can and cannot do.',
     'services.web.title': 'Websites & landing pages',
     'services.web.body':
       'Fast sites, with motion where it helps and SEO from day one. Designed for the phone first.',
@@ -182,6 +204,21 @@ export const ui = {
       'Apps for the day-to-day of a business: scheduling, inventory, sales, reports. Your team uses them without a manual.',
     'services.3d.title': '3D & games',
     'services.3d.body': '3D scenes for the web, geometry-heavy tools and multiplayer games with their own servers.',
+
+    'process.label': 'Consulting',
+    'process.title': 'How I work with you',
+    'process.lead':
+      'Before writing any code I get to know your business. Often the best solution is automating one step, not building a whole system.',
+    'process.1.title': 'Diagnosis',
+    'process.1.body': 'A call to understand your operation, what eats your time and where AI actually helps (and where it does not).',
+    'process.2.title': 'Proposal',
+    'process.2.body': 'Clear scope, timeline and cost in writing before we start. No fine print.',
+    'process.3.title': 'Build',
+    'process.3.body': 'Short deliveries you can try from the first week, with your team giving feedback.',
+    'process.4.title': 'Support',
+    'process.4.body': 'Training, adjustments and support after launch. Software has to work day to day.',
+    'process.cta': 'Book a diagnosis',
+    'process.orion': 'AI consulting for companies at Orion Consultoría',
 
     'projects.label': 'Projects',
     'projects.title': 'Recent work',
@@ -228,6 +265,7 @@ export const ui = {
     'about.cv': 'Download CV',
     'about.stack': 'What I work with',
     'about.now': "What I'm up to",
+    'about.job': 'Currently',
 
     'contact.label': 'Contact',
     'contact.title': 'Got a project in mind?',

@@ -1,0 +1,110 @@
+---
+title: 'Un .docx a mano: Word es un zip con XML'
+description: 'Cómo genero el plan de alimentación de Equivale en Word desde el navegador, sin librería de Word: tres archivos XML empaquetados con JSZip.'
+date: 2026-11-16
+tags: ['javascript', 'docx']
+---
+
+Equivale exporta el plan de alimentación a PDF, Excel y Word. Para PDF uso jsPDF y para Excel SheetJS, pero para Word no quise meter una librería completa: el documento solo lleva títulos, párrafos y tablas. Resulta que un `.docx` es mucho más sencillo de lo que parece, y armarlo a mano son unas veinte líneas.
+
+## Un .docx es un zip
+
+Si cambias la extensión de cualquier `.docx` a `.zip` y lo abres, vas a ver una carpeta con archivos XML. El formato se llama Office Open XML y el empaquetado sigue una convención llamada OPC: un zip con "partes" (archivos) y "relaciones" entre ellas.
+
+Word guarda muchas partes (estilos, temas, fuentes, configuración), pero para que abra un documento válido solo necesitas tres:
+
+- `[Content_Types].xml`: qué tipo MIME tiene cada parte.
+- `_rels/.rels`: la relación que dice cuál es el documento principal.
+- `word/document.xml`: el contenido.
+
+Sin `styles.xml`, Word usa sus estilos por defecto, y para un plan impreso eso basta.
+
+```js
+const zip = new JSZip();
+zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml"
+    ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Target="word/document.xml"
+    Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"/>
+</Relationships>`);
+zip.file('word/document.xml', docXml);
+const blob = await zip.generateAsync({ type: 'blob',
+  mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+```
+
+Un detalle que rompe archivos sin avisar: la declaración `<?xml ...?>` tiene que ser lo primero del archivo. Si tu template literal empieza con un salto de línea, el XML ya no es válido.
+
+## El modelo de WordprocessingML
+
+El contenido de `document.xml` sigue una jerarquía corta:
+
+- `w:body` contiene párrafos (`w:p`) y tablas (`w:tbl`).
+- Un párrafo contiene *runs* (`w:r`): tramos de texto con el mismo formato.
+- Un run contiene el texto (`w:t`).
+
+El formato de párrafo (espaciado, alineación) va en `w:pPr`, y el de carácter (negritas, tamaño, color) en `w:rPr`. Con eso armé un helper que genera un párrafo con un solo run:
+
+```js
+const xmlEsc = (s) => String(s ?? '').replace(/[&<>"]/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function wP(text, o = {}) {
+  const rpr = (o.b ? '<w:b/>' : '')
+    + (o.sz ? `<w:sz w:val="${o.sz}"/>` : '')          // medios puntos: 36 = 18 pt
+    + (o.color ? `<w:color w:val="${o.color}"/>` : ''); // hex sin #
+  return `<w:p><w:pPr><w:spacing w:before="${o.before || 0}" w:after="${o.after ?? 120}"/></w:pPr>`
+    + `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ''}`
+    + `<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
+}
+
+// wP('Plan de alimentación', { b: true, sz: 36, after: 60 })
+```
+
+`xml:space="preserve"` evita que Word se coma los espacios al inicio o al final del texto.
+
+## Las unidades, que es donde uno se pierde
+
+WordprocessingML usa unidades distintas según el atributo, y si no las conoces los números parecen arbitrarios:
+
+- **Tamaño de letra** (`w:sz`): medios puntos. `24` son 12 pt.
+- **Espaciado, márgenes y página**: vigésimos de punto, llamados *twips*. Una pulgada son 1440. Por eso la hoja carta es `12240 × 15840` y un margen de `1080` son tres cuartos de pulgada.
+- **Ancho de tabla en porcentaje** (`w:type="pct"`): quincuagésimos de punto porcentual. `5000` es el 100 %.
+
+El tamaño de página y los márgenes van en un `w:sectPr` al final del `w:body`.
+
+## Tablas
+
+Una tabla es `w:tbl` con sus propiedades (`w:tblPr`: ancho y bordes), una rejilla de columnas (`w:tblGrid`) y filas `w:tr` con celdas `w:tc`. En Equivale las uso para los equivalentes por tiempo de comida y para el menú:
+
+```js
+function wTable(head, rows) {
+  const cw = Math.floor(9360 / head.length); // ancho por columna, en twips
+  const cell = (t, isHead) => `<w:tc><w:tcPr><w:tcW w:w="${cw}" w:type="dxa"/>`
+    + (isHead ? '<w:shd w:val="clear" w:color="auto" w:fill="E0EFE9"/>' : '')
+    + `</w:tcPr>${wP(t, { b: isHead, sz: 18, after: 0 })}</w:tc>`;
+  const row = (r, isHead) => `<w:tr>${r.map((x) => cell(x, isHead)).join('')}</w:tr>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${borders}</w:tblPr>`
+    + `<w:tblGrid>${head.map(() => `<w:gridCol w:w="${cw}"/>`).join('')}</w:tblGrid>`
+    + row(head, true) + rows.map((r) => row(r, false)).join('')
+    + '</w:tbl>' + wP('', { after: 120 });
+}
+```
+
+Dos reglas que conviene saber. Cada celda tiene que contener al menos un párrafo, aunque esté vacío; una celda sin `w:p` es justo el tipo de error por el que Word dice que el archivo está dañado. Y después de cada tabla meto un párrafo vacío: da el espacio antes del siguiente título y evita que dos tablas seguidas queden pegadas. El sombreado del encabezado es `w:shd` con `w:fill` en hexadecimal.
+
+## Trampas y límites
+
+- **Escapa todo.** Un paciente que se llama "Pérez & Hijos" o una nota con un `<` rompe el XML y Word se niega a abrirlo. El escape de `&`, `<`, `>` y `"` cubre lo normal. XML 1.0 además prohíbe casi todos los caracteres de control; si el texto viene pegado de otro programa, vale la pena quitarlos también.
+- **Un salto de línea no es un salto de línea.** Un `\n` dentro de `w:t` no hace nada visible. Las recomendaciones del plan las parto por línea y genero un párrafo por cada una; la alternativa es un `w:br` dentro del run.
+- **Sin estilos no hay títulos de verdad.** Mis títulos son párrafos en negritas con letra grande, así que no aparecen en el panel de navegación ni en un índice. Para eso hace falta un `styles.xml` y su relación. Imágenes, encabezados o numeración también suman partes y relaciones. Cuando el documento necesita eso, una librería ya vale la pena.
+- **Prueba en varios lectores.** Word es el más estricto; LibreOffice y Google Docs perdonan errores que Word no.
+
+Como JSZip solo se usa al exportar, lo cargo con `import()` dinámico: Vite lo separa en su propio chunk y no pesa en la carga inicial de la app.
+
+El resto de Equivale (el cálculo de equivalentes, la distribución por tiempos de comida y por qué todo vive en el navegador) está en el [caso de estudio](/proyectos/equivale/).

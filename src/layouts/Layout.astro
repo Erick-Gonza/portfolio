@@ -40,7 +40,10 @@ const persona_ld = {
   jobTitle: lang === 'es' ? 'Desarrollador full-stack' : 'Full-stack developer',
   address: { '@type': 'PostalAddress', addressLocality: 'Monterrey', addressCountry: 'MX' },
   sameAs: [persona.github, persona.linkedin],
-  worksFor: { '@type': 'Organization', name: persona.empresa.nombre, url: persona.empresa.url },
+  worksFor: [
+    { '@type': 'Organization', name: persona.trabajo.empresa, address: { '@type': 'PostalAddress', addressLocality: 'San Pedro Garza García', addressRegion: 'NL', addressCountry: 'MX' } },
+    { '@type': 'Organization', name: persona.empresa.nombre, url: persona.empresa.url },
+  ],
 };
 ---
 

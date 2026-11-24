@@ -1,0 +1,101 @@
+---
+title: 'Un personaje, un servidor: tickets y bloqueos en Redis'
+description: 'Cómo evito que un personaje esté en dos servidores de mapa a la vez, y duplique objetos, con tickets de un solo uso y un bloqueo con token en Redis.'
+date: 2026-11-14
+tags: ['redis', 'multijugador', 'dotnet']
+---
+
+En Orion Galaxy cada mapa es un proceso aparte: un build de servidor dedicado de Unity en su propio contenedor. Cuando cruzas un portal, tu nave sale de un servidor y entra a otro. Ese cambio es el momento más delicado para la economía del juego, y en este post explico cómo lo resolví con dos piezas pequeñas en Redis.
+
+## El problema: dos dueños para el mismo personaje
+
+El servidor de mapa guarda el estado del personaje en la API cada 45 segundos, al desconectarse y al cruzar un portal. Cada guardado manda la foto completa: créditos, recursos, bodega, posición, experiencia. Mandar la foto completa es cómodo porque repetir un guardado no duplica nada, pero tiene un riesgo.
+
+Imagina esta secuencia:
+
+1. El jugador está en el mapa A con un objeto valioso en la bodega.
+2. Cruza a B. B carga el personaje y el jugador vende el objeto en el mercado a otra persona.
+3. A, que iba tarde, manda su guardado periódico con la foto vieja.
+
+Si la API acepta ese guardado, el objeto regresa a la bodega. Ahora existe dos veces. Lo mismo pasa si el cliente se desconecta y se conecta a otro servidor antes de que el primero termine de guardar.
+
+La regla que necesitaba es simple de decir: **en todo momento un personaje tiene como máximo un servidor dueño, y solo el dueño puede escribir**.
+
+## Pieza 1: el ticket de un solo uso
+
+El cliente nunca le dice al mapa "soy el personaje 42". La API, que ya autenticó la cuenta, emite un ticket: un token aleatorio guardado en Redis con el personaje y el mapa al que puede entrar, con 60 segundos de vida. El cliente se lo entrega al servidor de mapa, y el mapa lo canjea en la API.
+
+```csharp
+public async Task<string> IssueTicketAsync(long characterId, string mapId)
+{
+    string token = NewToken(); // 16 bytes aleatorios en hex
+    await Db.StringSetAsync($"ticket:{token}",
+        JsonSerializer.Serialize(new TicketData(characterId, mapId)), TimeSpan.FromSeconds(60));
+    return token;
+}
+
+public async Task<TicketData?> RedeemTicketAsync(string token)
+{
+    // GETDEL: leer y borrar en una sola operación. Un segundo canje recibe null.
+    var value = await Db.StringGetDeleteAsync($"ticket:{token}");
+    return value.IsNullOrEmpty ? null : JsonSerializer.Deserialize<TicketData>(value.ToString());
+}
+```
+
+El detalle importante es `GETDEL`. Si hicieras `GET` y luego `DEL` en dos llamadas, dos servidores podrían leer el mismo ticket antes de que cualquiera lo borre. Con una sola operación atómica, solo uno recibe el valor. Además, la API revisa que el ticket sea para el mapa que lo canjea: un ticket para B no sirve en C.
+
+## Pieza 2: el bloqueo con token
+
+El ticket prueba quién eres, pero no evita que otro servidor todavía te tenga cargado. Para eso, al canjear el ticket la API intenta tomar `lock:character:{id}` con `SET NX` (solo si no existe) y una caducidad de 150 segundos. El valor es otro token aleatorio que la API le devuelve al servidor de mapa. El mapa lo guarda en la sesión del jugador y lo manda en cada guardado.
+
+Si `SET NX` falla, la respuesta es un 409: "el personaje ya está en otro servidor". El cliente puede reintentar en unos segundos; cuando A termine de guardar y suelte el bloqueo, B podrá tomarlo.
+
+## Pieza 3: renovar o soltar, pero solo si sigue siendo tuyo
+
+Aquí está la parte sutil. El bloqueo caduca para que, si un servidor de mapa se cae, el personaje no quede atrapado para siempre. Pero la caducidad también significa que el bloqueo puede vencer mientras A sigue vivo, por ejemplo si se quedó colgado un rato. Entonces B lo toma con su propio token. Si después A hace un `DEL` normal, borraría el bloqueo de B.
+
+La solución es que cada renovación y cada liberación comparen el token primero, de forma atómica, con un script Lua:
+
+```lua
+-- KEYS[1] = lock:character:{id}  ARGV = token, soltar ('1' o '0'), ttl en ms
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  if ARGV[2] == '1' then
+    return redis.call('DEL', KEYS[1])
+  end
+  return redis.call('PEXPIRE', KEYS[1], ARGV[3])
+end
+return -1
+```
+
+Redis ejecuta el script completo sin intercalar otros comandos, así que nadie se puede meter entre el `GET` y el `DEL`. Un `-1` significa "ya no eres el dueño". Ese resultado es la puerta de entrada del endpoint de guardado:
+
+```csharp
+// Solo quien tiene el bloqueo puede guardar (y de paso lo renueva).
+if (!await sessions.RefreshOrReleaseLockAsync(id, req.LockToken, release: false))
+    return Error(409, "Este servidor ya no tiene el bloqueo del personaje.");
+
+await ApplyStateAsync(character, req.State, ...);
+
+if (req.Release) // desconexión o cambio de mapa: soltar DESPUÉS de guardar
+    await sessions.RefreshOrReleaseLockAsync(id, req.LockToken, release: true);
+```
+
+El orden importa. Si soltaras primero, B podría tomar el bloqueo y leer de Postgres el estado viejo antes de que llegue el guardado de A.
+
+## El cruce de portal completo
+
+Cruzar un portal es una sola petición a la API: verifica el bloqueo, vuelve a revisar el portal con las mismas reglas que usa el mapa (están en una librería compartida, así que la API no confía en lo que dice el mapa), guarda el estado con la posición de llegada, suelta el bloqueo y emite un ticket para el mapa destino junto con su dirección. El cliente se conecta a B, B canjea el ticket y toma el bloqueo.
+
+Entre que A suelta y B toma hay un instante en el que nadie es dueño del personaje. Eso está bien: con cero dueños nadie puede escribir. El estado peligroso es tener dos.
+
+## Los tiempos tienen que cuadrar
+
+El bloqueo dura 150 segundos y el guardado periódico ocurre cada 45. Cada guardado renueva el bloqueo, así que un servidor sano lo renueva unas tres veces antes de que pueda vencer; si un guardado falla, todavía hay margen. Si el servidor muere, el personaje queda libre en dos minutos y medio como máximo. Es un intercambio: una caducidad más larga hace esperar más tras una caída, y una más corta aumenta el riesgo de perder el bloqueo por un tropiezo de red.
+
+## Lo que esto no cubre
+
+- **La revisión y la escritura no son una sola operación.** El token se verifica en Redis y luego se escribe en Postgres. En teoría el bloqueo podría vencer entre las dos, pero la verificación lo acaba de renovar a 150 segundos y la escritura tarda mucho menos. Si necesitara una garantía más fuerte, guardaría un número de generación en la fila del personaje y haría un `UPDATE` condicionado a ese número.
+- **Depende de Redis.** Si Redis se cae, nadie entra a los mapas. Prefiero eso a duplicar objetos.
+- **No reemplaza la idempotencia.** Compras, ventas y fabricación llevan además su propia clave de idempotencia, para que un reintento de red no cobre dos veces.
+
+Si quieres ver cómo encaja esto con el resto de la arquitectura (FishNet, la API en .NET y los servidores por mapa), está en el [caso de estudio de Orion Galaxy](/proyectos/orion-galaxy/).

@@ -251,7 +251,7 @@ export async function crearEscena(hero: HTMLElement, canvas: HTMLCanvasElement):
       sistema.scale.setScalar(0.62);
     } else {
       const a = w / h;
-      sistema.position.set(a > 1.6 ? 3.4 : a > 1.2 ? 2.7 : 1.6, a > 1.2 ? 0.2 : 1.4, 0);
+      sistema.position.set(a > 1.5 ? 3.6 : a > 1.2 ? 3.0 : 1.6, a > 1.2 ? 0.2 : 1.4, 0);
       sistema.scale.setScalar(a > 1.2 ? 0.85 : 0.75);
     }
   };

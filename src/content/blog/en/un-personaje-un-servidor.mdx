@@ -1,0 +1,101 @@
+---
+title: 'One character, one server: tickets and locks in Redis'
+description: 'How I keep a character from living on two map servers at once, and duplicating items, with single-use tickets and a token-checked lock in Redis.'
+date: 2026-11-14
+tags: ['redis', 'multiplayer', 'dotnet']
+---
+
+In Orion Galaxy every map is a separate process: a Unity dedicated server build in its own container. When you jump through a portal, your ship leaves one server and enters another. That handoff is the most fragile moment for the game's economy, and in this post I explain how I solved it with two small pieces in Redis.
+
+## The problem: two owners for the same character
+
+The map server saves the character's state to the API every 45 seconds, on disconnect, and when crossing a portal. Each save sends the full snapshot: credits, resources, cargo, position, experience. Sending the full snapshot is convenient because repeating a save never duplicates anything, but it comes with a risk.
+
+Picture this sequence:
+
+1. The player is on map A with a valuable item in the cargo hold.
+2. They jump to B. B loads the character, and the player sells the item on the market to someone else.
+3. A, running late, sends its periodic save with the old snapshot.
+
+If the API accepts that save, the item goes back into the cargo hold. Now it exists twice. The same thing happens if the client disconnects and joins another server before the first one finishes saving.
+
+The rule I needed is easy to state: **at any moment a character has at most one owning server, and only the owner can write**.
+
+## Piece 1: the single-use ticket
+
+The client never tells the map "I'm character 42". The API, which has already authenticated the account, issues a ticket: a random token stored in Redis with the character and the map it may enter, valid for 60 seconds. The client hands it to the map server, and the map redeems it with the API.
+
+```csharp
+public async Task<string> IssueTicketAsync(long characterId, string mapId)
+{
+    string token = NewToken(); // 16 random bytes as hex
+    await Db.StringSetAsync($"ticket:{token}",
+        JsonSerializer.Serialize(new TicketData(characterId, mapId)), TimeSpan.FromSeconds(60));
+    return token;
+}
+
+public async Task<TicketData?> RedeemTicketAsync(string token)
+{
+    // GETDEL: read and delete in one operation. A second redemption gets null.
+    var value = await Db.StringGetDeleteAsync($"ticket:{token}");
+    return value.IsNullOrEmpty ? null : JsonSerializer.Deserialize<TicketData>(value.ToString());
+}
+```
+
+The important detail is `GETDEL`. If you did `GET` and then `DEL` in two calls, two servers could read the same ticket before either one deletes it. With a single atomic operation, only one of them gets the value. The API also checks that the ticket belongs to the map redeeming it: a ticket for B is useless on C.
+
+## Piece 2: the token-based lock
+
+The ticket proves who you are, but it doesn't stop another server from still having you loaded. For that, when the ticket is redeemed the API tries to take `lock:character:{id}` with `SET NX` (only if it doesn't exist) and a 150-second expiry. The value is another random token that the API returns to the map server. The map keeps it in the player's session and sends it with every save.
+
+If `SET NX` fails, the response is a 409: "the character is already on another server". The client can retry a few seconds later; once A finishes saving and releases the lock, B can take it.
+
+## Piece 3: renew or release, but only if it's still yours
+
+Here's the subtle part. The lock expires so that, if a map server crashes, the character isn't stuck forever. But expiry also means the lock can run out while A is still alive, say, if it stalled for a while. Then B takes it with its own token. If A later runs a plain `DEL`, it would delete B's lock.
+
+The fix is for every renewal and every release to compare the token first, atomically, with a Lua script:
+
+```lua
+-- KEYS[1] = lock:character:{id}  ARGV = token, release ('1' or '0'), ttl in ms
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  if ARGV[2] == '1' then
+    return redis.call('DEL', KEYS[1])
+  end
+  return redis.call('PEXPIRE', KEYS[1], ARGV[3])
+end
+return -1
+```
+
+Redis runs the whole script without interleaving other commands, so nobody can sneak in between the `GET` and the `DEL`. A `-1` means "you're no longer the owner". That result is the gate of the save endpoint:
+
+```csharp
+// Only the lock holder can save (and the check renews the lock).
+if (!await sessions.RefreshOrReleaseLockAsync(id, req.LockToken, release: false))
+    return Error(409, "This server no longer holds the character lock.");
+
+await ApplyStateAsync(character, req.State, ...);
+
+if (req.Release) // disconnect or map change: release AFTER saving
+    await sessions.RefreshOrReleaseLockAsync(id, req.LockToken, release: true);
+```
+
+Order matters. If you released first, B could take the lock and read the old state from Postgres before A's save lands.
+
+## The full portal jump
+
+Crossing a portal is a single request to the API: it verifies the lock, re-checks the portal with the same rules the map uses (they live in a shared library, so the API doesn't trust what the map says), saves the state with the arrival position, releases the lock, and issues a ticket for the destination map along with its address. The client connects to B, B redeems the ticket and takes the lock.
+
+Between A releasing and B taking there's a moment when nobody owns the character. That's fine: with zero owners, nobody can write. The dangerous state is having two.
+
+## The timings have to line up
+
+The lock lasts 150 seconds and the periodic save runs every 45. Every save renews the lock, so a healthy server renews it about three times before it could expire; if one save fails, there's still margin. If the server dies, the character is free in two and a half minutes at most. It's a trade-off: a longer expiry means a longer wait after a crash, and a shorter one raises the risk of losing the lock over a network hiccup.
+
+## What this doesn't cover
+
+- **The check and the write aren't one operation.** The token is verified in Redis and then the write goes to Postgres. In theory the lock could expire between the two, but the check has just renewed it to 150 seconds and the write takes far less. If I needed a stronger guarantee, I'd store a generation number on the character row and make the `UPDATE` conditional on it.
+- **It depends on Redis.** If Redis goes down, nobody can enter a map. I prefer that to duplicated items.
+- **It doesn't replace idempotency.** Purchases, sales, and crafting also carry their own idempotency key, so a network retry never charges twice.
+
+If you want to see how this fits with the rest of the architecture (FishNet, the .NET API, and one server per map), it's in the [Orion Galaxy case study](/en/projects/orion-galaxy/).

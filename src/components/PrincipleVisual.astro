@@ -1,0 +1,119 @@
+---
+// Ilustraciones de los principios de «Sobre mí». Mismo lenguaje que ServiceVisual: SVG con colores del tema y animación
+// suave al pasar el cursor por la tarjeta (se apaga con reduced-motion).
+interface Props {
+  tipo: 'producto' | 'datos' | 'movil';
+}
+const { tipo } = Astro.props;
+
+// Capas isométricas: de abajo arriba.
+const capas = [
+  { y: 112, label: 'DB', clase: 'fill-bg-2 stroke-line' },
+  { y: 84, label: 'API', clase: 'fill-bg-2 stroke-line' },
+  { y: 56, label: 'UI', clase: 'fill-bg-2 stroke-line' },
+  { y: 28, label: 'DEPLOY', clase: 'fill-accent/15 stroke-accent' },
+];
+const rombo = (cx: number, cy: number, w: number, h: number) =>
+  `${cx},${cy - h} ${cx + w},${cy} ${cx},${cy + h} ${cx - w},${cy}`;
+---
+
+<div class="principle-visual relative h-32 w-full md:h-36" aria-hidden="true">
+  {
+    tipo === 'producto' && (
+      <svg viewBox="0 0 260 150" class="size-full" fill="none">
+        <line x1="130" y1="28" x2="130" y2="112" class="stroke-line" stroke-width="1.5" stroke-dasharray="3 4" />
+        {capas.map((c, i) => (
+          <g class="pv-capa" style={`--i:${i}`}>
+            <polygon points={rombo(130, c.y + 6, 70, 22)} class="fill-line/60" />
+            <polygon points={rombo(130, c.y, 70, 22)} class={c.clase} stroke-width="1.5" />
+            <text x="214" y={c.y + 4} class="fill-muted font-mono text-[9px]">{c.label}</text>
+          </g>
+        ))}
+        <circle cx="130" cy="28" r="4" class="fill-accent" />
+        <circle cx="130" cy="112" r="4" class="fill-accent-2" />
+      </svg>
+    )
+  }
+  {
+    tipo === 'datos' && (
+      <svg viewBox="0 0 260 150" class="size-full" fill="none">
+        <rect x="2" y="8" width="196" height="134" rx="10" class="fill-bg-2 stroke-line" stroke-width="1.5" />
+        <text x="16" y="28" class="fill-muted font-mono text-[8px]">BEGIN;</text>
+        {[0, 1, 2, 3].map((i) => (
+          <g class="pv-fila" style={`--i:${i}`}>
+            <rect x="16" y={38 + i * 22} width="150" height="14" rx="3" class="fill-bg" />
+            <rect x="24" y={43 + i * 22} width={[60, 84, 48, 72][i]} height="4" rx="2" class="fill-muted/50" />
+            <circle cx="154" cy={45 + i * 22} r="5" class="fill-accent-2" />
+            <path d={`M151 ${45 + i * 22} l2 2 l4 -4`} class="stroke-bg" stroke-width="1.6" stroke-linecap="round" />
+          </g>
+        ))}
+        <text x="16" y="134" class="fill-accent font-mono text-[8px]">COMMIT;</text>
+        {/* Candado */}
+        <g transform="translate(222 70)" class="pv-candado">
+          <path d="M-12 -6 v-8 a12 12 0 0 1 24 0 v8" class="stroke-fg/70" stroke-width="3" />
+          <rect x="-18" y="-6" width="36" height="30" rx="6" class="fill-accent" />
+          <circle cx="0" cy="6" r="4" class="fill-bg" />
+          <rect x="-1.5" y="7" width="3" height="8" rx="1.5" class="fill-bg" />
+        </g>
+      </svg>
+    )
+  }
+  {
+    tipo === 'movil' && (
+      <svg viewBox="0 0 260 150" class="size-full" fill="none">
+        {/* Escritorio y tableta en segundo plano */}
+        <rect x="120" y="22" width="132" height="86" rx="6" class="fill-bg-2 stroke-line" stroke-width="1.5" />
+        <rect x="170" y="108" width="32" height="14" class="fill-line" />
+        <rect x="150" y="122" width="72" height="4" rx="2" class="fill-line" />
+        <rect x="132" y="36" width="64" height="8" rx="2" class="fill-muted/30" />
+        <rect x="132" y="50" width="100" height="4" rx="2" class="fill-muted/25" />
+        <rect x="70" y="44" width="70" height="96" rx="8" class="fill-bg-2 stroke-line" stroke-width="1.5" />
+        {/* Teléfono al frente */}
+        <g class="pv-telefono">
+          <rect x="14" y="14" width="66" height="128" rx="12" class="fill-bg stroke-accent" stroke-width="2" />
+          <rect x="37" y="20" width="20" height="4" rx="2" class="fill-line" />
+          <rect x="24" y="36" width="46" height="9" rx="2" class="fill-fg/85" />
+          <rect x="24" y="49" width="30" height="9" rx="2" class="fill-accent" />
+          <rect x="24" y="66" width="46" height="4" rx="2" class="fill-muted/40" />
+          <rect x="24" y="74" width="38" height="4" rx="2" class="fill-muted/40" />
+          <rect x="24" y="118" width="46" height="13" rx="6.5" class="fill-accent" />
+        </g>
+        {/* Flecha: del teléfono hacia pantallas grandes */}
+        <path d="M86 132 C 120 150, 200 150, 236 134" class="stroke-accent-2" stroke-width="1.5" stroke-dasharray="3 4" />
+        <path d="M230 130 l7 4 l-6 5" class="stroke-accent-2" stroke-width="1.5" stroke-linecap="round" />
+        <text x="14" y="10" class="fill-muted font-mono text-[8px]">375px →</text>
+      </svg>
+    )
+  }
+</div>
+
+<style>
+  .principle-visual :global(.pv-capa) {
+    transition: transform 0.7s var(--ease-fluid);
+    transition-delay: calc(var(--i) * 50ms);
+  }
+  :global(.group:hover) .principle-visual :global(.pv-capa) {
+    transform: translateY(calc((var(--i) - 1.5) * -5px));
+  }
+  .principle-visual :global(.pv-fila) {
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-fluid);
+    transition-delay: calc(var(--i) * 120ms + 0.2s);
+  }
+  :global(.is-in) .principle-visual :global(.pv-fila),
+  :root:not(.js) .principle-visual :global(.pv-fila) {
+    opacity: 1;
+  }
+  .principle-visual :global(.pv-candado) {
+    transition: transform 0.6s var(--ease-fluid);
+  }
+  :global(.group:hover) .principle-visual :global(.pv-candado) {
+    transform: translate(222px, 66px);
+  }
+  .principle-visual :global(.pv-telefono) {
+    transition: transform 0.7s var(--ease-fluid);
+  }
+  :global(.group:hover) .principle-visual :global(.pv-telefono) {
+    transform: translateY(-6px);
+  }
+</style>
