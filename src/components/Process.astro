@@ -1,7 +1,6 @@
 ---
 import SectionHead from './SectionHead.astro';
 import { ruta, t, type Lang } from '../i18n/ui';
-import { persona } from '../data/sitio';
 
 interface Props {
   lang: Lang;
@@ -52,8 +51,8 @@ const iconos = [
       <a href={ruta(lang, 'contact')} class="btn btn-primary" data-umami-event="cta-contacto" data-umami-event-ubicacion="proceso">
         {tr('process.cta')} <span aria-hidden="true">→</span>
       </a>
-      <a href={persona.empresa.url} target="_blank" rel="noopener" class="btn btn-ghost" data-umami-event="orion" data-umami-event-ubicacion="proceso">
-        {tr('process.orion')} ↗
+      <a href={ruta(lang, 'projects')} class="btn btn-ghost" data-umami-event="ver-proyectos" data-umami-event-ubicacion="proceso">
+        {tr('process.orion')}
       </a>
     </div>
   </div>
