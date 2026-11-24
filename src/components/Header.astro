@@ -18,8 +18,14 @@ const links = [
 const activo = (href: string) => path.startsWith(href.replace(/\/$/, ''));
 ---
 
-<header class="fixed inset-x-0 top-0 z-50" data-header>
-  <div class="container-x flex h-16 items-center justify-between gap-4">
+<header class="group fixed inset-x-0 top-0 z-50 transition-transform duration-500 ease-fluid" data-header>
+  <!-- Fondo en una capa aparte: un backdrop-filter en el <header> haría que el menú móvil (fixed) quedara atrapado
+       dentro de sus 64 px. -->
+  <div
+    class="pointer-events-none absolute inset-x-0 top-0 h-16 border-b border-transparent transition-[background-color,border-color] duration-500 group-data-[solido=true]:border-line group-data-[solido=true]:bg-bg/85 group-data-[solido=true]:backdrop-blur-lg"
+    aria-hidden="true"
+  ></div>
+  <div class="container-x relative flex h-16 items-center justify-between gap-4">
     <a href={ruta(lang, 'home')} class="font-display text-xl font-extrabold tracking-tight" aria-label="Inicio">
       erick<span class="text-accent">.</span>
     </a>
@@ -51,7 +57,7 @@ const activo = (href: string) => path.startsWith(href.replace(/\/$/, ''));
         {lang === 'es' ? 'EN' : 'ES'}
       </a>
       <ThemeToggle label={tr('theme.toggle')} />
-      <a href={ruta(lang, 'contact')} class="btn btn-primary hidden !min-h-10 !px-4 text-sm md:inline-flex">
+      <a href={ruta(lang, 'contact')} data-umami-event="cta-contacto" data-umami-event-ubicacion="header" class="btn btn-primary hidden !min-h-10 !px-4 text-sm md:inline-flex">
         {tr('nav.contact')}
       </a>
       <button
@@ -116,16 +122,15 @@ const activo = (href: string) => path.startsWith(href.replace(/\/$/, ''));
   menu.querySelectorAll('[data-menu-link]').forEach((a) => a.addEventListener('click', () => set(false)));
   document.addEventListener('keydown', (e) => e.key === 'Escape' && !menu.hidden && set(false));
 
-  // El header se esconde al bajar y vuelve al subir.
-  let last = 0;
-  addEventListener(
-    'scroll',
-    () => {
-      const y = scrollY;
-      header.style.transform = y > last && y > 200 ? 'translateY(-110%)' : '';
-      last = y;
-    },
-    { passive: true },
-  );
-  header.style.transition = 'transform .5s cubic-bezier(.32,.72,0,1)';
+  // El header se esconde al bajar y vuelve al subir. Fuera de la parte de arriba lleva fondo, para que el texto de la
+  // página no se encime con el logo y los enlaces.
+  let last = scrollY;
+  const actualizar = () => {
+    const y = scrollY;
+    header.style.transform = y > last && y > 200 ? 'translateY(-110%)' : '';
+    header.dataset.solido = String(y > 24);
+    last = y;
+  };
+  addEventListener('scroll', actualizar, { passive: true });
+  actualizar();
 </script>

@@ -14,7 +14,7 @@ const tr = t(lang);
 const lista = await proyectos(lang);
 ---
 
-<Layout lang={lang} title={tr('projects.title')} description={tr('projects.intro')} alt={ruta(lang === 'es' ? 'en' : 'es', 'projects')}>
+<Layout lang={lang} title={tr('projects.metaTitle')} description={tr('projects.intro')} alt={ruta(lang === 'es' ? 'en' : 'es', 'projects')}>
   <section class="pt-32 pb-12 md:pt-44">
     <div class="container-x">
       <SectionHead as="h1" label={tr('projects.label')} title={tr('projects.title')} />

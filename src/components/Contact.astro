@@ -23,15 +23,15 @@ const campo =
 
       <p class="label mt-10">{tr('contact.or')}</p>
       <div class="mt-4 flex flex-col gap-3" data-reveal>
-        <a href={wa} target="_blank" rel="noopener" class="btn btn-ghost justify-between">
+        <a href={wa} target="_blank" rel="noopener" class="btn btn-ghost justify-between" data-umami-event="whatsapp" data-umami-event-ubicacion="contacto">
           <span>WhatsApp</span><span class="font-mono text-xs text-muted">{persona.whatsappVisible}</span>
         </a>
-        <a href={`mailto:${persona.email}`} class="btn btn-ghost justify-between">
+        <a href={`mailto:${persona.email}`} class="btn btn-ghost justify-between" data-umami-event="email" data-umami-event-ubicacion="contacto">
           <span>Email</span><span class="truncate font-mono text-xs text-muted">{persona.email}</span>
         </a>
         <div class="grid grid-cols-2 gap-3">
-          <a href={persona.linkedin} target="_blank" rel="noopener" class="btn btn-ghost">LinkedIn ↗</a>
-          <a href={persona.github} target="_blank" rel="noopener" class="btn btn-ghost">GitHub ↗</a>
+          <a href={persona.linkedin} target="_blank" rel="noopener" class="btn btn-ghost" data-umami-event="linkedin" data-umami-event-ubicacion="contacto">LinkedIn ↗</a>
+          <a href={persona.github} target="_blank" rel="noopener" class="btn btn-ghost" data-umami-event="github" data-umami-event-ubicacion="contacto">GitHub ↗</a>
         </div>
       </div>
     </div>

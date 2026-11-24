@@ -2,6 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 import { langDeUrl, ruta, t } from '../i18n/ui';
 
+// Se renderiza en el servidor para saber la URL real que falló y responder en el idioma de esa ruta (/en/… → inglés).
+export const prerender = false;
+
 const lang = langDeUrl(Astro.url);
 const tr = t(lang);
 ---

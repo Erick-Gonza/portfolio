@@ -5,6 +5,8 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { locales, t, type Lang } from '../i18n/ui';
 import { persona, umami } from '../data/sitio';
+import { claveOg, entradasOg } from '../data/og';
+import WhatsappFlotante from '../components/WhatsappFlotante.astro';
 
 interface Props {
   lang: Lang;
@@ -20,11 +22,14 @@ interface Props {
 const { lang, title, description, alt, noindex = false, type = 'website', jsonLd } = Astro.props;
 const tr = t(lang);
 const otro: Lang = lang === 'es' ? 'en' : 'es';
-const fullTitle = title ? `${title} · ${persona.nombreCorto}` : tr('meta.title');
+const fullTitle = title ? `${title} · ${persona.nombre}` : tr('meta.title');
 const desc = description ?? tr('meta.description');
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const altUrl = alt ? new URL(alt, Astro.site) : null;
-const ogImage = new URL('/og.png', Astro.site);
+// Imagen para redes propia de la página si existe (src/pages/og), si no la genérica de public/og.png.
+const clave = claveOg(Astro.url.pathname);
+const tieneOg = (await entradasOg()).some((e) => e.clave === clave);
+const ogImage = new URL(tieneOg ? `/og/${clave}.png` : '/og.png', Astro.site);
 
 const persona_ld = {
   '@context': 'https://schema.org',
@@ -56,7 +61,7 @@ const persona_ld = {
     <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
     <meta name="theme-color" content="#f1efe8" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#07070c" media="(prefers-color-scheme: dark)" />
-    <Font cssVariable="--font-syne" preload />
+    <Font cssVariable="--font-bricolage" preload />
     <Font cssVariable="--font-geist" preload />
     <Font cssVariable="--font-geist-mono" />
 
@@ -81,6 +86,8 @@ const persona_ld = {
     <meta property="og:description" content={desc} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta property="og:image:alt" content={fullTitle} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -98,6 +105,7 @@ const persona_ld = {
       <slot />
     </main>
     <Footer lang={lang} />
+    <WhatsappFlotante lang={lang} />
     <script>
       import '../scripts/reveal';
     </script>

@@ -47,7 +47,7 @@ const principios = es
     ];
 ---
 
-<Layout lang={lang} title={tr('about.label')} description={tr('meta.description')} alt={ruta(otro, 'about')}>
+<Layout lang={lang} title={tr('about.metaTitle')} description={tr('meta.description')} alt={ruta(otro, 'about')}>
   <section class="container-x pt-32 pb-16 md:pt-44">
     <SectionHead as="h1" label={tr('about.label')} title={tr('about.title')} />
     <div class="mt-10 grid gap-10 md:grid-cols-[1.2fr_1fr] md:gap-16">
@@ -102,7 +102,7 @@ const principios = es
       <aside class="flex flex-col gap-3 self-start" data-reveal style="--d:.1s">
         {
           hayCv && (
-            <a href={cv} class="btn btn-primary" download>
+            <a href={cv} class="btn btn-primary" download data-umami-event="descargar-cv" data-umami-event-idioma={lang}>
               {tr('about.cv')} ↓
             </a>
           )

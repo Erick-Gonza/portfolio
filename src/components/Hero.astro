@@ -33,17 +33,17 @@ const tr = t(lang);
       <span class="relative flex size-2"><span class="absolute inline-flex size-full animate-ping rounded-full bg-accent-2 opacity-60"></span><span class="relative inline-flex size-2 rounded-full bg-accent-2"></span></span>
       {tr('hero.kicker')}
     </p>
-    <h1 class="display mt-5 text-[clamp(2.6rem,10.5vw,8rem)]">
+    <h1 class="display mt-5 text-[clamp(3rem,14vw,9.5rem)]">
       <span class="block" data-reveal style="--d:.05s">{tr('hero.title.1')}</span>
       <span class="outline-text block" data-reveal style="--d:.15s">{tr('hero.title.2')}</span>
       <span class="block text-accent" data-reveal style="--d:.25s">{tr('hero.title.3')}</span>
     </h1>
     <p class="mt-6 max-w-md text-lg text-fg/80" data-reveal style="--d:.35s">{tr('hero.lead')}</p>
     <div class="mt-8 flex flex-col gap-3 xs:flex-row" data-reveal style="--d:.45s">
-      <a href={ruta(lang, 'contact')} class="btn btn-primary">
+      <a href={ruta(lang, 'contact')} class="btn btn-primary" data-umami-event="cta-contacto" data-umami-event-ubicacion="hero">
         {tr('hero.cta')} <span aria-hidden="true">→</span>
       </a>
-      <a href={ruta(lang, 'projects')} class="btn btn-ghost">{tr('hero.secondary')}</a>
+      <a href={ruta(lang, 'projects')} class="btn btn-ghost" data-umami-event="ver-proyectos" data-umami-event-ubicacion="hero">{tr('hero.secondary')}</a>
     </div>
     <p class="label mt-10 hidden items-center gap-2 opacity-0 transition-opacity duration-700 md:flex" data-hero-hint>
       <span aria-hidden="true">◎</span>

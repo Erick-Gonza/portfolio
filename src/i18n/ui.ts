@@ -52,7 +52,7 @@ export const ui = {
     'theme.toggle': 'Cambiar tema',
     'lang.switch': 'English',
 
-    'meta.title': 'Erick — Desarrollador full-stack, 3D y videojuegos',
+    'meta.title': 'Erick Gonzalez — Desarrollador web y de software en Monterrey',
     'meta.description':
       'Diseño y desarrollo apps web, sistemas a medida, experiencias 3D y videojuegos. Desde Monterrey, para negocios en cualquier lugar.',
 
@@ -80,6 +80,7 @@ export const ui = {
 
     'projects.label': 'Proyectos',
     'projects.title': 'Trabajo reciente',
+    'projects.metaTitle': 'Proyectos: apps, sistemas a la medida y videojuegos',
     'projects.all': 'Ver todos los proyectos',
     'projects.intro':
       'Casos de estudio de lo que he construido: qué problema resolvía, cómo está hecho y en qué punto está.',
@@ -101,6 +102,7 @@ export const ui = {
 
     'blog.label': 'Blog',
     'blog.title': 'Notas de taller',
+    'blog.metaTitle': 'Blog de desarrollo web, 3D y videojuegos',
     'blog.intro': 'Lo que aprendo construyendo: decisiones técnicas, errores y cosas que funcionaron.',
     'blog.latest': 'Últimos posts',
     'blog.all': 'Ir al blog',
@@ -118,6 +120,7 @@ export const ui = {
 
     'about.label': 'Sobre mí',
     'about.title': 'Hola, soy Erick.',
+    'about.metaTitle': 'Sobre mí: desarrollador full-stack desde 2019',
     'about.cv': 'Descargar CV',
     'about.stack': 'Con qué trabajo',
     'about.now': 'En qué ando',
@@ -155,7 +158,7 @@ export const ui = {
     'theme.toggle': 'Toggle theme',
     'lang.switch': 'Español',
 
-    'meta.title': 'Erick — Full-stack, 3D & game developer',
+    'meta.title': 'Erick Gonzalez — Web & software developer in Monterrey, Mexico',
     'meta.description':
       'I design and build web apps, custom business software, 3D experiences and games. Based in Monterrey, working with clients anywhere.',
 
@@ -182,6 +185,7 @@ export const ui = {
 
     'projects.label': 'Projects',
     'projects.title': 'Recent work',
+    'projects.metaTitle': 'Projects: web apps, custom software and games',
     'projects.all': 'See all projects',
     'projects.intro': "Case studies of what I've built: the problem it solved, how it's made and where it stands.",
     'projects.stack': 'Stack',
@@ -202,6 +206,7 @@ export const ui = {
 
     'blog.label': 'Blog',
     'blog.title': 'Workshop notes',
+    'blog.metaTitle': 'Blog on web development, 3D and games',
     'blog.intro': 'What I learn while building: technical decisions, mistakes and things that worked.',
     'blog.latest': 'Latest posts',
     'blog.all': 'Go to the blog',
@@ -219,6 +224,7 @@ export const ui = {
 
     'about.label': 'About',
     'about.title': "Hi, I'm Erick.",
+    'about.metaTitle': 'About: full-stack developer since 2019',
     'about.cv': 'Download CV',
     'about.stack': 'What I work with',
     'about.now': "What I'm up to",

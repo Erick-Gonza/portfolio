@@ -21,7 +21,7 @@
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
   --color-on-accent: var(--on-accent);
-  --font-display: var(--font-syne), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -125,13 +125,19 @@
   .display {
     font-family: var(--font-display);
     font-weight: 800;
-    line-height: 0.92;
-    letter-spacing: -0.03em;
+    line-height: 0.9;
+    letter-spacing: -0.035em;
     text-wrap: balance;
   }
   .outline-text {
-    color: transparent;
-    -webkit-text-stroke: 1.5px var(--fg);
+    color: color-mix(in oklab, var(--fg) 14%, transparent);
+    -webkit-text-stroke: 2px var(--fg);
+  }
+  @media (min-width: 48rem) {
+    .outline-text {
+      color: color-mix(in oklab, var(--fg) 6%, transparent);
+      -webkit-text-stroke: 1.5px var(--fg);
+    }
   }
   .container-x {
     width: 100%;

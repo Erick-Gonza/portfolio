@@ -29,12 +29,12 @@ export default defineConfig({
       i18n: { defaultLocale: 'es', locales: { es: 'es-MX', en: 'en-US' } },
     }),
   ],
-  // Fuentes servidas desde el propio dominio. Syne para titulares, Geist para texto y Geist Mono para etiquetas.
+  // Fuentes servidas desde el propio dominio. Bricolage Grotesque para titulares, Geist para texto y Geist Mono para etiquetas.
   fonts: [
     {
       provider: fontProviders.fontsource(),
-      name: 'Syne',
-      cssVariable: '--font-syne',
+      name: 'Bricolage Grotesque',
+      cssVariable: '--font-bricolage',
       weights: [600, 700, 800],
       styles: ['normal'],
       subsets: ['latin'],
