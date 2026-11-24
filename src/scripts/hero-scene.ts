@@ -22,7 +22,7 @@ function ruido(x: number, y: number, z: number) {
 }
 
 function planetaProcedural(radio: number, detalle: number) {
-  const geo = new THREE.IcosahedronGeometry(radio, detalle).toNonIndexed();
+  const geo = new THREE.IcosahedronGeometry(radio, detalle); // ya viene sin índices: un color por cara
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {

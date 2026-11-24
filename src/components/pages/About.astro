@@ -56,8 +56,8 @@ const principios = es
           es ? (
             <>
               <p class="text-xl text-fg">
-                Soy desarrollador full-stack en {persona.ciudad}. Construyo productos completos: el modelo de datos, las
-                reglas de negocio, la interfaz y el servidor donde corren.
+                Soy desarrollador full-stack en {persona.ciudad} y trabajo en esto desde {persona.desde}. Construyo
+                productos completos: el modelo de datos, las reglas de negocio, la interfaz y el servidor donde corren.
               </p>
               <p>
                 Mi trabajo va de sistemas para negocios (una app de dietocálculo para nutriólogos, un sistema de gestión
@@ -77,8 +77,8 @@ const principios = es
           ) : (
             <>
               <p class="text-xl text-fg">
-                I'm a full-stack developer in {persona.ciudad}. I build complete products: the data model, the business
-                rules, the interface and the server they run on.
+                I'm a full-stack developer in {persona.ciudad}, working professionally since {persona.desde}. I build
+                complete products: the data model, the business rules, the interface and the server they run on.
               </p>
               <p>
                 My work ranges from business software (a diet-planning app for nutritionists, a management system for
@@ -97,7 +97,7 @@ const principios = es
             </>
           )
         }
-        {/* PREGUNTA: años de experiencia, formación y trabajos anteriores para completar esta sección. */}
+        {/* PREGUNTA: formación y trabajos anteriores, para el CV. */}
       </div>
       <aside class="flex flex-col gap-3 self-start" data-reveal style="--d:.1s">
         {

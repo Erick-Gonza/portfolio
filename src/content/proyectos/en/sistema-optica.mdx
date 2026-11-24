@@ -4,7 +4,7 @@ summary: "End-to-end management for an optical store: patient records and prescr
 year: 2026
 role: "Full-stack design & development"
 category: "app"
-status: "beta"
+status: "produccion"
 stack: ["Next.js 16", "React 19", "TypeScript", "PostgreSQL", "Drizzle ORM", "Tailwind 4 + shadcn/ui", "Vitest + PGlite", "Dokploy"]
 links:
   # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/sistema-optica"
@@ -17,7 +17,7 @@ accent: "#0284c7"
 
 An optical store is really two businesses: a clinical one (eye exams, prescriptions, studies) and a retail one (frames, lenses, sales paid in installments, jobs sent to an outside lab). Running it on separate notebooks and spreadsheets means losing track of things: which patient still owes money, which glasses have arrived, whose prescription is due for a check-up, whether the inventory matches what was sold.
 
-{/* PREGUNTA: Is it for a specific store (a real client) or your own product? Is it already used in production? If it's used daily, change status to "produccion". */}
+I built it for a real optical store, which runs its day-to-day operations on it.
 
 ## The solution
 
@@ -46,6 +46,6 @@ One web app with the modules the store needs every day:
 
 ## Status and next steps
 
-All modules are complete and it's ready to deploy, with daily database backups to an S3 bucket. It has no public URL because it's an internal tool.
+It's in production at the store, with daily database backups to an S3 bucket. It has no public URL because it's an internal tool.
 
 {/* PREGUNTA: How many users or locations use it? What's next: multiple locations, Mexican e-invoicing (CFDI), WhatsApp reminders? */}

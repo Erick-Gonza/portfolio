@@ -49,6 +49,9 @@ Contenido en Markdown o MDX.
 
 ## Modelos 3D
 
+El archivo fuente es `modelos/espacio.blend` (escena «Portafolio»). Al exportar a `src/assets/models/espacio.glb`: solo
+los cuatro objetos, cada uno en el origen, sin UV ni cámaras/luces.
+
 La escena funciona sola con geometría procedural. Si existe `src/assets/models/espacio.glb`, sus objetos llamados
 `Planeta`, `Luna`, `Nave` y `Asteroide` reemplazan a los procedurales (los que falten se quedan como están). Mantén
 cada uno centrado en el origen, con radio del planeta ≈ 1.6 unidades, low-poly y con materiales simples.

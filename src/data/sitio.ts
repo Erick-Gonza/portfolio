@@ -2,8 +2,9 @@
 // src/i18n/ui.ts.
 
 export const persona = {
-  // PREGUNTA: ¿nombre completo tal como quieres que aparezca (p. ej. «Erick González»)?
-  nombre: 'Erick',
+  nombre: 'Erick Gonzalez',
+  // Año en que empezó a trabajar como desarrollador.
+  desde: 2019,
   nombreCorto: 'Erick',
   ciudad: 'Monterrey, México',
   email: 'eagm080897@gmail.com',

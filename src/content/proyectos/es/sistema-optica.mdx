@@ -4,7 +4,7 @@ summary: "Gestión completa de una óptica: expediente y graduaciones, agenda, v
 year: 2026
 role: "Diseño y desarrollo full-stack"
 category: "app"
-status: "beta"
+status: "produccion"
 stack: ["Next.js 16", "React 19", "TypeScript", "PostgreSQL", "Drizzle ORM", "Tailwind 4 + shadcn/ui", "Vitest + PGlite", "Dokploy"]
 links:
   # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/sistema-optica"
@@ -17,7 +17,7 @@ accent: "#0284c7"
 
 Una óptica mezcla dos negocios: el clínico (exámenes visuales, graduaciones, estudios) y el comercial (armazones, micas, ventas a plazos, trabajos que se mandan a un laboratorio externo). Llevarlo con libretas y hojas de cálculo separadas hace que se pierda el hilo: qué paciente tiene saldo, qué lentes ya llegaron, quién tiene la graduación vencida, si el inventario cuadra con lo vendido.
 
-{/* PREGUNTA: ¿Es para una óptica en particular (cliente real) o es un producto propio? ¿Ya se usa en producción? Si se usa a diario, cambia status a "produccion". */}
+Lo construí para una óptica real, que hoy lo usa en su operación diaria.
 
 ## La solución
 
@@ -46,6 +46,6 @@ Una sola aplicación web con los módulos que necesita el día a día:
 
 ## Estado y siguientes pasos
 
-El sistema está completo en sus módulos y listo para desplegarse con respaldos diarios de la base a un bucket S3. No tiene URL pública porque es una herramienta interna.
+Está en producción en la óptica, con respaldos diarios de la base a un bucket S3. No tiene URL pública porque es una herramienta interna.
 
 {/* PREGUNTA: ¿Cuántos usuarios o sucursales lo usan? ¿Qué sigue: multi-sucursal, facturación (CFDI), recordatorios por WhatsApp? */}
