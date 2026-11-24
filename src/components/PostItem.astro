@@ -1,0 +1,23 @@
+---
+import { ruta, t, type Lang } from '../i18n/ui';
+import { fecha, minutosLectura, slugDe, type Post } from '../data/contenido';
+
+interface Props {
+  post: Post;
+  lang: Lang;
+}
+const { post, lang } = Astro.props;
+const tr = t(lang);
+const d = post.data;
+---
+
+<li class="border-b border-line" data-reveal>
+  <a href={ruta(lang, 'blog', slugDe(post))} class="group grid gap-2 py-6 md:grid-cols-[10rem_1fr_auto] md:items-baseline md:gap-8">
+    <time datetime={d.date.toISOString()} class="font-mono text-xs text-muted">{fecha(d.date, lang)}</time>
+    <div>
+      <h3 class="font-display text-2xl font-bold tracking-tight transition-colors group-hover:text-accent md:text-3xl">{d.title}</h3>
+      <p class="mt-1 text-fg/70">{d.description}</p>
+    </div>
+    <span class="font-mono text-xs text-muted">{minutosLectura(post.body)} {tr('blog.readTime')}</span>
+  </a>
+</li>

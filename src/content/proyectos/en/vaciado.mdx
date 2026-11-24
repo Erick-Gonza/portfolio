@@ -1,0 +1,50 @@
+---
+title: "Vaciado"
+summary: "In-browser two-part mold generator: load an STL and get both halves ready to print, without uploading anything to a server."
+year: 2026
+role: "Design & development"
+category: "tool"
+status: "prototipo"
+stack: ["TypeScript", "three.js", "Manifold (WASM)", "three-bvh-csg", "three-mesh-bvh", "Web Workers", "Vite"]
+links:
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/3d-mold"
+featured: true
+order: 3
+accent: "#ff7a3d"
+---
+
+## The problem
+
+To cast copies of a figure in resin, plaster or silicone you need a two-part mold. Designing one in CAD isn't trivial: you split a block along a plane, subtract the figure, add a pour spout and vents so air doesn't get trapped, registration keys so the halves line up, and then check the part can come out without getting stuck. That's a lot of work for something that's nearly the same every time.
+
+{/* PREGUNTA: Why did you build it? Do you use it to cast your own parts, and with what material? Have you printed and tested real molds? */}
+
+## The solution
+
+Vaciado loads an STL in the browser and generates the full mold. There are two kinds: *box* (a block split by the plane) and *contour* (a shell that follows the figure's shape, with a joining flange and an optional flat base). The parting plane can be X, Y or horizontal. The funnel spout is placed automatically at the highest point, vents go on the peaks where air would get trapped, and registration keys and screw holes are spread wherever they fit. Undercuts are painted red so you can change the plane before printing. Each half exports to binary STL, with shrinkage compensation for the casting material. An X-ray mode shows the halves as translucent shells with the figure inside.
+
+Nothing leaves the user's machine: all the computation runs locally.
+
+## How it's built
+
+The computation lives in a Web Worker, separate from the viewer.
+
+- `grid.ts`: voxelizes the model and computes an exact distance field.
+- `surfaceNets.ts`: builds the contour-mode shell from that field.
+- `generate.ts`: picks spout, vents, keys and screws, and chains the boolean operations.
+- `csg.ts`: a `Csg` interface with two engines, Manifold (WebAssembly) and three-bvh-csg.
+- `undercut.ts`: per-face undercut detection using a BVH.
+- `viewer.ts`: the three.js viewer, with a print bed, section cut and the X-ray material (Fresnel with additive blending).
+
+## Technical challenges
+
+- **Knowing what's inside an imperfect mesh.** Voxelization casts one vertical ray per column and counts the direction of each crossing (winding number). If the column doesn't close because the STL has holes, it falls back to parity and drops the last crossing so it doesn't fill all the way to the top of the grid. Rays get an irrational offset so they never hit edges exactly.
+- **Exact distances without brute force.** The distance field uses the Felzenszwalb transform, separable per axis, which gives exact Euclidean distance in linear time. Shell thickness and the placement of spout, vents and keys all come from it.
+- **Two boolean engines.** Manifold is faster and always returns closed meshes, but it requires a closed input. If it fails, the worker retries with three-bvh-csg, which tolerates broken meshes, and says so in the summary. The cavity is subtracted first on purpose: if Manifold is going to fail, it fails early and the retry doesn't redo work.
+- **Staying responsive while you drag a slider.** There are two workers: a preview one with coarse voxels that answers in a fraction of a second, and a final-quality one that runs when you let go. Each caches the stages that don't depend on the parameter you touched, so moving a vent only reruns the last operations. A `bench.html` page measures each stage, what came from cache and how many open edges remain.
+
+## Status and next steps
+
+It's a working prototype: it generates, previews and exports both mold types, and it doesn't have a public URL yet. When the figure isn't closed, the STL from the tolerant engine can have T-junctions; slicers usually repair them, but it's the weakest spot.
+
+{/* PREGUNTA: Do you have real bench timings (for example, for a 100k-triangle mesh)? Do you plan to publish it with a URL? */}

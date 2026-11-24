@@ -1,0 +1,49 @@
+---
+title: "Orion Consultoría"
+summary: "Landing page for my custom AI consultancy: a sales page built around objections, with a calculator and an animated canvas galaxy."
+year: 2026
+role: "Design & development"
+category: "web"
+status: "produccion"
+stack: ["Astro 7", "Tailwind CSS 4", "TypeScript", "GSAP", "Lenis", "Canvas 2D", "nginx", "Dokploy"]
+links:
+  demo: "https://orion-consultoria.tech"
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/orion-consultoria"
+featured: false
+order: 5
+accent: "#a99cff"
+---
+
+## The problem
+
+Orion is my consultancy: I design and deliver AI solutions built for each business, with at most one week from diagnosis to delivery. I needed a page that explained that offer to business owners without empty promises or made-up numbers, and that led to a single step: booking a free diagnostic call.
+
+{/* PREGUNTA: Do you already have Orion clients or delivered projects you can mention? Do Equivale and the game count as Orion work? */}
+
+## The solution
+
+The page follows a sales script from top to bottom: the concrete promise (custom AI, ready in 7 days) with the project week as the visual; the cost of waiting, with a calculator where visitors enter their own hours and rates; a manifesto that lights up word by word as you scroll; the process day by day; example solutions; a comparison with traditional consulting; an FAQ that answers objections; and the same call to action at the end.
+
+The content rule is to make nothing up: the calculator uses the visitor's numbers and says it isn't a savings promise, and the testimonials section stays unpublished until there are real reviews.
+
+## How it's built
+
+It starts from my Astro landing template, adapted to this offer.
+
+- All content lives in `src/data/sitio.ts`; sections, meta tags, JSON-LD and `llms.txt` read from it. An empty field never reaches the build and is flagged as pending in development.
+- SEO: JSON-LD with `ProfessionalService`, `WebSite`, `WebPage` and `FAQPage`, a sitemap, `robots.txt` and `llms.txt` for AI assistants.
+- Light and dark themes with CSS tokens, no flash on load, and the Geist typeface served from the site's own domain.
+- Lenis for smooth scrolling synced with GSAP ScrollTrigger; reveal animations use IntersectionObserver instead of scroll listeners.
+- A static build served by nginx in Docker, deployed on Dokploy on every push.
+
+## Technical challenges
+
+- **A canvas galaxy that stays in the background.** The backdrop is a 2D canvas with three star populations (scattered field, spiral arms and fine dust that draws the shape), with differential rotation (the core spins faster than the edges), twinkling and depth-based parallax. The star count scales with screen area, with caps; stars are generated in relative units so the mobile browser bar resizing the viewport doesn't reshuffle them; and colors come from CSS variables so they follow the theme.
+- **Respecting people who don't want motion.** With `prefers-reduced-motion` the galaxy renders a single still frame, Lenis stays off and the manifesto shows up fully lit.
+- **An honest calculator.** It validates inline, shows the error next to the field and keeps the last valid result instead of showing `NaN`.
+
+## Status and next steps
+
+It's live at `orion-consultoria.tech`. Still pending in the repo: the booking link for the main button, contact details, real testimonials, pricing and legal pages. The template includes a video journey scrubbed by scroll, but for this page I chose not to use it and kept a light, static hero.
+
+{/* PREGUNTA: The brief mentions scroll-scrubbed video, but this landing's code doesn't use it (index.astro says the hero is static). Did you add it later, or should I describe it this way? Does the CTA have a link in production yet? */}

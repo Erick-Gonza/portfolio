@@ -1,0 +1,58 @@
+---
+import { render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { ruta, t, type Lang } from '../../i18n/ui';
+import { fecha, minutosLectura, slugDe, slugTag, traduccion, type Post } from '../../data/contenido';
+import { persona } from '../../data/sitio';
+
+interface Props {
+  lang: Lang;
+  post: Post;
+}
+const { lang, post } = Astro.props;
+const tr = t(lang);
+const d = post.data;
+const slug = slugDe(post);
+const { Content } = await render(post);
+const otro: Lang = lang === 'es' ? 'en' : 'es';
+const hayTraduccion = !!(await traduccion('blog', slug, otro));
+const alt = hayTraduccion ? ruta(otro, 'blog', slug) : ruta(otro, 'blog');
+
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: d.title,
+  description: d.description,
+  datePublished: d.date.toISOString(),
+  dateModified: (d.updated ?? d.date).toISOString(),
+  inLanguage: lang,
+  author: { '@type': 'Person', name: persona.nombre, url: Astro.site?.href },
+  keywords: d.tags.join(', '),
+};
+---
+
+<Layout lang={lang} title={d.title} description={d.description} alt={alt} type="article" jsonLd={ld}>
+  <article class="container-x pt-32 pb-24 md:pt-44">
+    <header class="max-w-4xl">
+      <a href={ruta(lang, 'blog')} class="label hover:text-fg">← {tr('blog.back')}</a>
+      <h1 class="display mt-6 text-[clamp(2.5rem,9vw,5.5rem)]" data-pagefind-meta="title">{d.title}</h1>
+      <p class="mt-6 max-w-2xl text-xl text-fg/80">{d.description}</p>
+      <div class="mt-8 flex flex-wrap items-center gap-3 font-mono text-xs text-muted">
+        <time datetime={d.date.toISOString()}>{fecha(d.date, lang)}</time>
+        <span aria-hidden="true">·</span>
+        <span>{minutosLectura(post.body)} {tr('blog.readTime')}</span>
+        {d.tags.map((tg) => <a href={ruta(lang, 'tags', slugTag(tg))} class="chip hover:border-fg hover:text-fg">#{tg}</a>)}
+      </div>
+      {
+        hayTraduccion && (
+          <a href={alt} hreflang={otro} class="mt-6 inline-block text-sm text-accent underline underline-offset-4">
+            {tr('blog.otherLang')} →
+          </a>
+        )
+      }
+    </header>
+    <div class="prose-x mt-14 md:ml-[16%]" data-pagefind-body>
+      <Content />
+    </div>
+  </article>
+</Layout>

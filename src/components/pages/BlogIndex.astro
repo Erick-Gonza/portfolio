@@ -1,0 +1,64 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SectionHead from '../SectionHead.astro';
+import PostItem from '../PostItem.astro';
+import Search from '../Search.astro';
+import { ruta, t, type Lang } from '../../i18n/ui';
+import { posts, slugTag, type Post } from '../../data/contenido';
+
+interface Props {
+  lang: Lang;
+  /** Si viene, la página es el listado de un tema. */
+  tag?: string;
+  lista?: Post[];
+}
+const { lang, tag } = Astro.props;
+const tr = t(lang);
+const todos = await posts(lang);
+const lista = Astro.props.lista ?? todos;
+const tags = [...new Set(todos.flatMap((p) => p.data.tags))].sort();
+const otro: Lang = lang === 'es' ? 'en' : 'es';
+const titulo = tag ? `${tr('blog.tag')}: ${tag}` : tr('blog.title');
+---
+
+<Layout lang={lang} title={titulo} description={tr('blog.intro')} alt={ruta(otro, 'blog')}>
+  <section class="container-x pt-32 pb-20 md:pt-44">
+    <SectionHead as="h1" label={tr('blog.label')} title={tag ? `#${tag}` : tr('blog.title')} />
+    <p class="mt-6 max-w-xl text-lg text-fg/75" data-reveal>{tr('blog.intro')}</p>
+
+    <div class="mt-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+      {
+        tags.length > 0 && (
+          <nav aria-label={tr('blog.tags')} class="flex flex-wrap gap-2">
+            <a href={ruta(lang, 'blog')} class:list={['chip hover:border-fg hover:text-fg', !tag && '!border-accent !text-accent']}>
+              {tr('blog.allTags')}
+            </a>
+            {tags.map((tg) => (
+              <a
+                href={ruta(lang, 'tags', slugTag(tg))}
+                class:list={['chip hover:border-fg hover:text-fg', tag === tg && '!border-accent !text-accent']}
+              >
+                #{tg}
+              </a>
+            ))}
+          </nav>
+        )
+      }
+      <a href={ruta(lang, 'rss')} class="chip self-start hover:border-fg hover:text-fg">RSS ↗</a>
+    </div>
+
+    <Search lang={lang} />
+
+    {
+      lista.length ? (
+        <ul class="mt-10 border-t border-line">
+          {lista.map((p) => (
+            <PostItem post={p} lang={lang} />
+          ))}
+        </ul>
+      ) : (
+        <p class="mt-10 text-muted">{tr('blog.empty')}</p>
+      )
+    }
+  </section>
+</Layout>

@@ -1,0 +1,48 @@
+---
+title: 'Un hero 3D que no castiga al teléfono'
+description: 'Cómo armé la escena espacial de este portafolio con three.js sin que el texto espere al 3D ni se coma la batería en móvil.'
+date: 2026-11-24
+tags: ['three.js', 'rendimiento', 'astro']
+---
+
+La portada de este sitio tiene un planeta low-poly con un anillo de asteroides y una nave que orbita y reacciona al cursor (o al giroscopio, si lo abres en el teléfono). Se ve bien, pero un hero 3D tiene un riesgo claro: que la página tarde en cargar, el teléfono se caliente y el visitante se vaya antes de leer una sola línea.
+
+Estas son las reglas que seguí para que eso no pase.
+
+## 1. El texto nunca espera al 3D
+
+El HTML de la portada sale prerenderizado por Astro y no depende de JavaScript. Detrás del titular hay un **póster en SVG**: un hexágono con degradado y un anillo, que pesa menos de 1 kB y se ve al instante.
+
+three.js se carga después, como un chunk aparte, cuando el navegador ya terminó de pintar y está libre (`requestIdleCallback`). Cuando la escena está lista, el canvas aparece con un fundido y el póster se va.
+
+## 2. Decidir antes de descargar
+
+Antes de importar three.js reviso si vale la pena:
+
+- `prefers-reduced-motion`: si la persona pidió menos movimiento, se queda el póster.
+- Modo de ahorro de datos (`navigator.connection.saveData`).
+- Equipos muy limitados: poca memoria (`deviceMemory`) o pocos núcleos.
+- Que exista WebGL 2.
+
+Si algo falla, el visitante ve el póster y la página funciona igual. Nadie descarga 150 kB de un motor 3D que no va a usar.
+
+## 3. Menos de todo en móvil
+
+En pantallas chicas la escena es la misma pero más barata:
+
+- El planeta usa una subdivisión menos (la mitad de caras, aproximadamente).
+- Menos estrellas y menos asteroides.
+- `devicePixelRatio` topado en 1.5 y sin antialiasing: en una pantalla de alta densidad casi no se nota, y el GPU lo agradece.
+- Los asteroides son un `InstancedMesh`, así que todo el anillo se dibuja en una sola llamada.
+
+## 4. No dibujar lo que no se ve
+
+El bucle de render se apaga cuando el hero sale de pantalla (`IntersectionObserver`) o cuando la pestaña queda en segundo plano (`visibilitychange`). Si bajas a leer los proyectos, el GPU descansa.
+
+## 5. El giroscopio en iOS pide permiso
+
+En Android el evento `deviceorientation` llega sin más. En iOS hay que pedir permiso con un gesto del usuario, así que la petición se hace en el primer toque sobre el hero. Si la persona dice que no, la escena sigue animándose sola.
+
+## Lo que sigue
+
+Ahora la escena usa geometría generada con código. El siguiente paso es cambiarla por modelos low-poly hechos en Blender y exportados a GLB. La escena ya busca esos objetos por nombre (`Planeta`, `Luna`, `Nave`, `Asteroide`), así que el cambio será soltar un archivo y listo.

@@ -1,0 +1,47 @@
+---
+title: "Orion Galaxy"
+summary: "Top-down space MMORPG for PC: authoritative Unity map servers, a .NET API, Postgres and Redis, deployed and in closed beta."
+year: 2026
+role: "Design, development & 3D art"
+category: "game"
+status: "beta"
+stack: ["Unity 6", "C#", "FishNet", "ASP.NET Core", "PostgreSQL", "Redis", "Blender", "Dokploy"]
+links:
+  demo: "https://descargas-juego.orion-consultoria.tech"
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/MMORPG"
+featured: true
+order: 1
+accent: "#38bdf8"
+---
+
+## The problem
+
+I wanted to make a space MMORPG in the spirit of DarkOrbit: fly a class-based ship, farm enemies and asteroids, craft gear and move from map to map through portals, with open PvP and safe zones. In this genre the economy is everything: if an item gets duplicated crossing a portal, or a client can report made-up damage, the game falls apart. And it was my first multiplayer project, built by one person, meant to run on a cheap VPS.
+
+{/* PREGUNTA: What got you to build it? Do you see it as a commercial product (the plan says indie with cosmetics) or a personal project? */}
+
+## The solution
+
+The server decides everything; the client only sends intentions ("move here", "attack that", "cast this ability toward this point"). It currently has three classes with 18 ships, a skill tree, drones and formations, mining, timed crafting, multi-phase world bosses, wave portals in private instances, two factions fighting over PvP zones, clans, a market and missions. It ships with a Windows installer that updates itself.
+
+## How it's built
+
+- **Client and map server** in the same Unity 6 project with FishNet. Code is split into assemblies so server-only logic (AI, loot, saving) never ends up in the client build. Each map runs as a Linux *dedicated server* build in its own container: seven maps plus two instances for portals.
+- **API** in ASP.NET Core (.NET 10) with EF Core: accounts, characters, inventory, economy, and a SignalR hub for chat, groups and clans that stays connected across map changes.
+- **Game.Shared** (netstandard2.1): formulas, definitions and DTOs shared by the API and Unity, covered by 288 xUnit tests.
+- **Design data** in 26 JSON files (`gamedata/`) with a validator that runs in a pre-commit hook.
+- **Infra**: Postgres and Redis in Docker, deployment on Dokploy, CI on GitHub Actions and client releases with Velopack.
+- **Art**: my own models in Blender, many of them generated with Python scripts.
+
+## Technical challenges
+
+- **One character, one server.** To join a map, the API issues a single-use ticket (60 s) in Redis, redeemed with `GETDEL`. The map server takes a lock on the character with `SET NX`, renews it with a Lua script that checks the token before extending or releasing it, and only saves while it still holds the lock. That way crossing a portal or reconnecting can't duplicate items.
+- **An economy with no lost or double charges.** Every purchase, sale, craft or upgrade is a transaction with an idempotency key and a row in `economy_log`. The map server queues each character's calls so a periodic save never overwrites a purchase.
+- **Balance you can measure.** A simulator in the test suite pits all 10 three-class party combinations against a boss using the real formulas and data, and fails if any class becomes mandatory or useless.
+- **Performance.** The server moves ships once per tick at 60 Hz, and each client only receives what's within 150 m (it drops out at 165 m, so things don't flicker at the edge). The asteroid field is generated in 100 m chunks around the camera, with procedurally built rocks, instancing and three levels of detail.
+
+## Status and next steps
+
+It's at version 0.38.0, deployed to production and in beta with friends, with the closed alpha in progress. Next up are advanced gear and Elite ships. There are also end-to-end tests for the API (157 checks) and chat (54), and autopilot modes in the client for testing with nobody at the keyboard.
+
+{/* PREGUNTA: How many players are in the beta? When did you actually start the project (git history begins on November 6, 2026)? Is the repo public? */}

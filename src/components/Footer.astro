@@ -1,0 +1,42 @@
+---
+import { ruta, t, type Lang } from '../i18n/ui';
+import { persona } from '../data/sitio';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-line">
+  <div class="container-x grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
+    <div>
+      <a href={ruta(lang, 'home')} class="display text-[clamp(3rem,12vw,7rem)]">
+        erick<span class="text-accent">.</span>
+      </a>
+      <p class="mt-4 max-w-xs text-sm text-muted">{tr('footer.made')}</p>
+    </div>
+    <nav class="flex flex-col gap-2 text-sm">
+      <span class="label mb-2">{lang === 'es' ? 'Sitio' : 'Site'}</span>
+      <a href={ruta(lang, 'projects')} class="hover:text-accent">{tr('nav.projects')}</a>
+      <a href={ruta(lang, 'blog')} class="hover:text-accent">{tr('nav.blog')}</a>
+      <a href={ruta(lang, 'about')} class="hover:text-accent">{tr('nav.about')}</a>
+      <a href={ruta(lang, 'rss')} class="hover:text-accent">{tr('blog.rss')}</a>
+    </nav>
+    <div class="flex flex-col gap-2 text-sm">
+      <span class="label mb-2">{tr('nav.contact')}</span>
+      <a href={`mailto:${persona.email}`} class="break-all hover:text-accent">{persona.email}</a>
+      <a href={`https://wa.me/${persona.whatsapp}`} class="hover:text-accent" rel="noopener" target="_blank">WhatsApp</a>
+      <a href={persona.linkedin} class="hover:text-accent" rel="noopener" target="_blank">LinkedIn</a>
+      <a href={persona.github} class="hover:text-accent" rel="noopener" target="_blank">GitHub</a>
+    </div>
+  </div>
+  <div class="container-x flex flex-wrap justify-between gap-2 border-t border-line py-5 font-mono text-xs text-muted">
+    <span>© {year} {persona.nombre} · {persona.ciudad}</span>
+    <a href="https://github.com/Erick-Gonza/portfolio" class="hover:text-fg" rel="noopener" target="_blank">
+      {tr('footer.source')} ↗
+    </a>
+  </div>
+</footer>

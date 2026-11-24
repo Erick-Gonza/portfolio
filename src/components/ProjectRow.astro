@@ -1,0 +1,39 @@
+---
+import { ruta, t, type Lang } from '../i18n/ui';
+import { slugDe, type Proyecto } from '../data/contenido';
+
+interface Props {
+  proyecto: Proyecto;
+  lang: Lang;
+  index: number;
+}
+const { proyecto, lang, index } = Astro.props;
+const tr = t(lang);
+const d = proyecto.data;
+const href = ruta(lang, 'projects', slugDe(proyecto));
+
+// Texto sobre el color del proyecto al hacer hover: negro o blanco según su luminancia.
+const [r, g, b] = [1, 3, 5].map((i) => parseInt(d.accent.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+const sobre = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.25 ? '#0b0a10' : '#fbfaf6';
+---
+
+<li class="group relative border-b border-line" style={`--p:${d.accent};--on-p:${sobre}`} data-reveal>
+  <!-- Barrido de color del proyecto al pasar el cursor. -->
+  <span
+    class="absolute inset-0 origin-bottom scale-y-0 bg-[var(--p)] transition-transform duration-700 ease-fluid group-hover:scale-y-100 motion-reduce:hidden"
+    aria-hidden="true"></span>
+  <a href={href} class="container-x relative grid gap-3 py-7 transition-colors group-hover:text-[var(--on-p)] md:grid-cols-[4rem_1fr_auto] md:items-center md:gap-8 md:py-10">
+    <span class="font-mono text-xs text-muted transition-colors group-hover:text-current">
+      {String(index + 1).padStart(2, '0')}
+    </span>
+    <div>
+      <h3 class="display text-[clamp(2.25rem,8vw,4.75rem)]">{d.title}</h3>
+      <p class="mt-2 max-w-xl opacity-75">{d.summary}</p>
+    </div>
+    <div class="flex flex-wrap gap-2 md:max-w-xs md:justify-end">
+      {[tr(`category.${d.category}`), tr(`status.${d.status}`), d.year].map((c) => (
+        <span class="chip transition-colors group-hover:border-current group-hover:text-current">{c}</span>
+      ))}
+    </div>
+  </a>
+</li>

@@ -1,0 +1,50 @@
+---
+title: "Equivale"
+summary: "Dietocálculo por equivalentes SMAE para nutriólogos: de la evaluación del paciente al plan exportado en PDF, Word o Excel, sin servidor."
+year: 2026
+role: "Diseño y desarrollo"
+category: "app"
+status: "produccion"
+stack: ["JavaScript", "Vite", "jsPDF", "SheetJS", "JSZip", "Docker", "nginx", "Dokploy"]
+links:
+  demo: "https://equivale.orion-consultoria.tech"
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/equivale"
+featured: true
+order: 2
+accent: "#0e6b5c"
+---
+
+## El problema
+
+El dietocálculo por equivalentes del SMAE (Sistema Mexicano de Alimentos Equivalentes) es la forma estándar de armar un plan de alimentación en México, pero en la práctica se hace en hojas de cálculo o a mano: calcular el gasto energético, repartir los macronutrientes en equivalentes por grupo, distribuirlos en cinco tiempos de comida y luego armar un menú que cuadre. Cada paso depende del anterior y un error al principio se arrastra hasta el plan que recibe el paciente.
+
+{/* PREGUNTA: ¿Para quién lo hiciste? ¿Lo usa algún nutriólogo o consultorio real, y cuántas personas lo usan hoy? */}
+
+## La solución
+
+Equivale lleva la consulta en cinco pasos: evaluación, dietocálculo, distribución, menú y plan. Con peso, talla, edad, sexo y actividad calcula IMC, índice cintura-cadera, peso teórico y ajustado, y el gasto energético con cuatro fórmulas (Harris-Benedict, FAO/OMS, Mifflin-St Jeor e IOM), con el extra por embarazo o lactancia. A partir de las kilocalorías objetivo y el reparto de macros propone los equivalentes de cada uno de los 19 grupos, los distribuye por tiempo de comida y deja armar el menú con un catálogo de 527 alimentos. Tiene un modo renal que marca sodio, potasio, fósforo y proteína por kilo contra sus metas.
+
+El plan se exporta a PDF, Word y Excel con los datos del nutriólogo. Todo vive en el navegador: no hay cuentas ni servidor, y los datos se respaldan e importan como archivo.
+
+## Cómo está construido
+
+Empezó como un prototipo en un solo HTML y lo migré a Vite con módulos ES separados por responsabilidad.
+
+- `calc.js`: grupos SMAE, fórmulas y cálculos puros, sin DOM.
+- `state.js`: estado, guardado en `localStorage` con debounce y migración de datos entre versiones.
+- `outputs.js`: todas las salidas de la consulta se recalculan en cada cambio y se escriben en nodos marcados con `data-o`, sin volver a pintar la vista.
+- `exports.js`: jsPDF + autotable, SheetJS y JSZip se cargan con `import()` bajo demanda, así que no pesan en la carga inicial.
+- Despliegue: Dockerfile multi-stage (Node compila, nginx sirve `dist/`) en Dokploy, con caché inmutable para los assets con hash.
+
+## Retos técnicos
+
+- **Proponer equivalentes que cuadren.** `autoEq` fija una base (verduras, frutas, leche, leguminosas) y luego ajusta cereales, origen animal y grasas en hasta ocho iteraciones, redondeando a medios equivalentes, hasta quedar a menos de 3 % de las kilocalorías objetivo. En modo vegetariano la proteína sale de leguminosas con un tope para no pasarse de hidratos.
+- **Repartir sin perder medios equivalentes.** La distribución por tiempo de comida trabaja en unidades de medio equivalente y usa el método del mayor residuo, así la suma por grupo siempre coincide con el total.
+- **Word sin librería de Word.** El `.docx` se arma a mano: escribo el WordprocessingML (párrafos, tablas, bordes) y lo empaqueto con JSZip.
+- **Actualizar el catálogo sin pisar datos.** El catálogo tiene versión; al subirla, la migración agrega los alimentos nuevos por id y respeta los que el nutriólogo editó, ocultó o creó. El catálogo ampliado documenta sus fuentes (SMAE para porciones, USDA FoodData Central para composición) y marca las estimaciones.
+
+## Estado y siguientes pasos
+
+Está en producción en `equivale.orion-consultoria.tech` con despliegue automático en cada push. La limitación principal es la que viene del diseño: los datos dependen del navegador y del dominio, por eso la app recuerda hacer respaldos. Sincronizar entre dispositivos requeriría un backend y cuentas, que hoy no tiene.
+
+{/* PREGUNTA: ¿Un nutriólogo validó las fórmulas y el catálogo? ¿Hay planes para sincronización, cuentas o más funciones? */}

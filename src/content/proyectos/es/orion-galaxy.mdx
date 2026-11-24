@@ -1,0 +1,47 @@
+---
+title: "Orion Galaxy"
+summary: "MMORPG espacial top-down para PC: servidores de mapa autoritativos en Unity, una API .NET, Postgres y Redis, desplegado y en beta cerrada."
+year: 2026
+role: "Diseño, desarrollo y arte 3D"
+category: "game"
+status: "beta"
+stack: ["Unity 6", "C#", "FishNet", "ASP.NET Core", "PostgreSQL", "Redis", "Blender", "Dokploy"]
+links:
+  demo: "https://descargas-juego.orion-consultoria.tech"
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/MMORPG"
+featured: true
+order: 1
+accent: "#38bdf8"
+---
+
+## El problema
+
+Quería hacer un MMORPG espacial en la línea de DarkOrbit: pilotar una nave de clase, farmear enemigos y asteroides, fabricar equipo y avanzar de mapa en mapa por portales, con PvP abierto y zonas seguras. Es un género donde la economía lo es todo: si un objeto se duplica al cruzar un portal o un cliente puede mandar daño inventado, el juego se rompe. Y era mi primer multijugador, hecho por una sola persona, con la meta de correr en un VPS barato.
+
+{/* PREGUNTA: ¿Qué te llevó a hacerlo? ¿Lo ves como producto comercial (el plan dice indie con cosméticos) o como proyecto personal? */}
+
+## La solución
+
+El servidor decide todo; el cliente solo manda intenciones ("muévete aquí", "ataca a este", "usa la habilidad hacia este punto"). Hoy tiene tres clases con 18 naves, árbol de habilidades, drones y formaciones, minería, fabricación con temporizador, jefes de mundo con fases, portales de oleadas en instancias privadas, dos facciones con guerra por zonas, clanes, mercado y misiones. Se instala con un instalador de Windows que se actualiza solo.
+
+## Cómo está construido
+
+- **Cliente y servidor de mapa** en el mismo proyecto Unity 6 con FishNet. El código está separado en ensamblados: lo de servidor (IA, botín, guardado) no entra en el build del cliente. Cada mapa corre como build *dedicated server* de Linux en su propio contenedor: siete mapas y dos instancias para portales.
+- **API** en ASP.NET Core (.NET 10) con EF Core: cuentas, personajes, inventario, economía y un hub de SignalR para chat, grupos y clanes, que sobrevive al cambio de mapa.
+- **Game.Shared** (netstandard2.1): fórmulas, definiciones y DTOs compartidos por la API y Unity, con 288 pruebas xUnit.
+- **Datos de diseño** en 26 archivos JSON (`gamedata/`) con un validador que corre en un hook de pre-commit.
+- **Infra**: Postgres y Redis en Docker, despliegue en Dokploy, CI en GitHub Actions y publicación del cliente con Velopack.
+- **Arte**: modelos propios en Blender, muchos generados con scripts de Python.
+
+## Retos técnicos
+
+- **Que un personaje esté en un solo servidor.** Para entrar a un mapa la API emite un ticket de un solo uso (60 s) en Redis, que se canjea con `GETDEL`. El mapa toma un bloqueo del personaje con `SET NX`, lo renueva con un script Lua que compara el token antes de extenderlo o soltarlo, y solo guarda si todavía lo tiene. Así cruzar un portal o reconectar no duplica objetos.
+- **Economía sin pérdidas ni dobles cobros.** Cada compra, venta, fabricación o mejora es una transacción con clave de idempotencia y una fila en `economy_log`. El servidor de mapa pone en fila las llamadas de cada personaje para que un guardado periódico no pise una compra.
+- **Balance medido, no intuido.** Un simulador en las pruebas enfrenta las 10 combinaciones de grupo de tres clases a un jefe con las fórmulas y datos reales, y falla si alguna clase se vuelve obligatoria o inútil.
+- **Rendimiento.** El servidor mueve las naves una vez por tick a 60 Hz y cada cliente solo recibe lo que está a menos de 150 m (deja de verlo a 165 m, para no parpadear en el borde). El campo de asteroides se genera por trozos de 100 m alrededor de la cámara, con rocas hechas por código, instancing y tres niveles de detalle.
+
+## Estado y siguientes pasos
+
+Va en la versión 0.38.0, desplegado en producción y en beta con amigos, con la alpha cerrada en curso. Lo siguiente es equipo avanzado y naves Élite. Además hay pruebas de punta a punta de la API (157 comprobaciones) y del chat (54), y modos de piloto automático en el cliente para probar sin nadie al teclado.
+
+{/* PREGUNTA: ¿Cuántos jugadores hay en la beta? ¿Cuándo empezaste realmente el proyecto (el historial de git arranca el 6 de noviembre de 2026)? ¿El repo es público? */}

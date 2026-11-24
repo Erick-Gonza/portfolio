@@ -1,0 +1,16 @@
+---
+import BlogIndex from '../../../../components/pages/BlogIndex.astro';
+import { posts, slugTag } from '../../../../data/contenido';
+
+export async function getStaticPaths() {
+  const todos = await posts('en');
+  const tags = [...new Set(todos.flatMap((p) => p.data.tags))];
+  return tags.map((tag) => ({
+    params: { tag: slugTag(tag) },
+    props: { tag, lista: todos.filter((p) => p.data.tags.includes(tag)) },
+  }));
+}
+const { tag, lista } = Astro.props;
+---
+
+<BlogIndex lang="en" tag={tag} lista={lista} />

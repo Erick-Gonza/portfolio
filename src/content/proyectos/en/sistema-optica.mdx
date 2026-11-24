@@ -1,0 +1,51 @@
+---
+title: "Optical store management system"
+summary: "End-to-end management for an optical store: patient records and prescriptions, scheduling, sales on installments, lab orders, inventory and cash closing."
+year: 2026
+role: "Full-stack design & development"
+category: "app"
+status: "beta"
+stack: ["Next.js 16", "React 19", "TypeScript", "PostgreSQL", "Drizzle ORM", "Tailwind 4 + shadcn/ui", "Vitest + PGlite", "Dokploy"]
+links:
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/sistema-optica"
+featured: false
+order: 4
+accent: "#0284c7"
+---
+
+## The problem
+
+An optical store is really two businesses: a clinical one (eye exams, prescriptions, studies) and a retail one (frames, lenses, sales paid in installments, jobs sent to an outside lab). Running it on separate notebooks and spreadsheets means losing track of things: which patient still owes money, which glasses have arrived, whose prescription is due for a check-up, whether the inventory matches what was sold.
+
+{/* PREGUNTA: Is it for a specific store (a real client) or your own product? Is it already used in production? If it's used daily, change status to "produccion". */}
+
+## The solution
+
+One web app with the modules the store needs every day:
+
+- **Home** with today's appointments, money collected, outstanding balances, glasses ready for pickup, low stock and patients whose prescription is out of date, so they can be called in.
+- **Eye exam** in a prescription-style OD/OS grid (sphere, cylinder, axis, add, prism, visual acuity, PD, keratometry, IOP, contact lens parameters), with optical validation: 0.25 D steps, minus cylinder and an axis between 1 and 180. A chart shows how each eye's prescription has changed over time.
+- **Calendar** with day/week/month views and drag to reschedule.
+- **Sales** with discounts, a down payment and the lab order in the same step; **collections** with balance aging; **lab** as a board by status; **inventory** with a stock ledger; **cash register** with a daily close and the difference against counted cash.
+- **PDFs**: prescription, sales note, 80 mm receipt, payment receipt and lab order.
+
+## How it's built
+
+- Next.js 16 with the App Router and Server Actions; every action checks the session and validates input with zod.
+- Business rules live in `server/services/` as functions that take the database, separate from the actions and from read queries.
+- PostgreSQL with Drizzle: 17 tables, money as `numeric(12,2)` and diopters as `numeric(5,2)`.
+- Custom session handling with a signed JWT (jose) in a cookie, and Argon2 password hashing.
+- Docker on Dokploy: on startup the container runs migrations, creates the admin if the database is empty and exposes `/api/salud` as a health check, so a deploy doesn't retire the old version until the new one responds.
+
+## Technical challenges
+
+- **Atomic sales.** Creating a sale inserts the line items, takes stock out, records the down payment and creates the lab order in a single transaction. Stock is decremented with an `UPDATE` that only applies if it won't go negative; if any line is short, the whole transaction rolls back and the error names the product. Cancelling puts the stock back and records the refund per payment method.
+- **Tests against real Postgres, without Docker.** Services are tested with Vitest on PGlite (in-memory Postgres) running the real migrations: sales with down payments, rollback on missing stock, payments that can't exceed the balance, cancellations, lab status transitions and the cash close.
+- **Dates and money.** The server runs in UTC and the store in `America/Mexico_City`, so everything is formatted and bucketed by day in local time. Amounts are rounded to cents in a way that avoids floating-point errors.
+- **Deployment details.** Behind Dokploy's proxy, the `Secure` cookie flag is only set when `x-forwarded-proto` is HTTPS; without that, a plain-HTTP test domain left login stuck in a redirect loop. Deleting a user also invalidates their open sessions, and the production seed no longer reinstalls sample data.
+
+## Status and next steps
+
+All modules are complete and it's ready to deploy, with daily database backups to an S3 bucket. It has no public URL because it's an internal tool.
+
+{/* PREGUNTA: How many users or locations use it? What's next: multiple locations, Mexican e-invoicing (CFDI), WhatsApp reminders? */}

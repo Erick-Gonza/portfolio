@@ -1,0 +1,85 @@
+---
+import { render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import Contact from '../Contact.astro';
+import { ruta, t, type Lang } from '../../i18n/ui';
+import { proyectos, slugDe, traduccion, type Proyecto } from '../../data/contenido';
+
+interface Props {
+  lang: Lang;
+  proyecto: Proyecto;
+}
+const { lang, proyecto } = Astro.props;
+const tr = t(lang);
+const d = proyecto.data;
+const slug = slugDe(proyecto);
+const { Content } = await render(proyecto);
+const otro: Lang = lang === 'es' ? 'en' : 'es';
+const alt = (await traduccion('proyectos', slug, otro)) ? ruta(otro, 'projects', slug) : ruta(otro, 'projects');
+
+const lista = await proyectos(lang);
+const i = lista.findIndex((p) => slugDe(p) === slug);
+const siguiente = lista[(i + 1) % lista.length];
+
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: d.title,
+  description: d.summary,
+  dateModified: String(d.year),
+  inLanguage: lang,
+  ...(d.links.demo && { url: d.links.demo }),
+  ...(d.links.repo && { codeRepository: d.links.repo }),
+  keywords: d.stack.join(', '),
+};
+---
+
+<Layout lang={lang} title={d.title} description={d.summary} alt={alt} type="article" jsonLd={ld}>
+  <article style={`--p:${d.accent}`}>
+    <header class="relative overflow-hidden pt-32 pb-14 md:pt-44 md:pb-20">
+      <div class="pointer-events-none absolute -top-40 -right-40 size-[32rem] rounded-full bg-[var(--p)] opacity-25 blur-3xl" aria-hidden="true"></div>
+      <div class="container-x relative">
+        <a href={ruta(lang, 'projects')} class="label hover:text-fg">← {tr('projects.back')}</a>
+        <h1 class="display mt-6 text-[clamp(3rem,13vw,8.5rem)]" data-reveal>{d.title}</h1>
+        <p class="mt-6 max-w-2xl text-xl text-fg/80" data-reveal style="--d:.1s">{d.summary}</p>
+
+        <dl class="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-4" data-reveal style="--d:.2s">
+          <div class="bg-bg p-4"><dt class="label">{tr('projects.role')}</dt><dd class="mt-2 text-sm">{d.role}</dd></div>
+          <div class="bg-bg p-4"><dt class="label">{tr('projects.year')}</dt><dd class="mt-2 text-sm">{d.year}</dd></div>
+          <div class="bg-bg p-4"><dt class="label">{tr('projects.status')}</dt><dd class="mt-2 flex items-center gap-2 text-sm"><span class="size-2 rounded-full bg-[var(--p)]"></span>{tr(`status.${d.status}`)}</dd></div>
+          <div class="bg-bg p-4"><dt class="label">{lang === 'es' ? 'Tipo' : 'Type'}</dt><dd class="mt-2 text-sm">{tr(`category.${d.category}`)}</dd></div>
+        </dl>
+
+        <div class="mt-6 flex flex-wrap gap-2">
+          {d.stack.map((s) => <span class="chip">{s}</span>)}
+        </div>
+        {
+          (d.links.demo || d.links.repo) && (
+            <div class="mt-8 flex flex-col gap-3 xs:flex-row">
+              {d.links.demo && <a href={d.links.demo} target="_blank" rel="noopener" class="btn btn-primary">{tr('projects.demo')} ↗</a>}
+              {d.links.repo && <a href={d.links.repo} target="_blank" rel="noopener" class="btn btn-ghost">{tr('projects.repo')} ↗</a>}
+            </div>
+          )
+        }
+      </div>
+    </header>
+
+    <div class="container-x pb-20">
+      <div class="prose-x mx-auto md:ml-[16%]" data-pagefind-body>
+        <Content />
+      </div>
+    </div>
+  </article>
+
+  {
+    siguiente && siguiente.id !== proyecto.id && (
+      <a href={ruta(lang, 'projects', slugDe(siguiente))} class="group block border-t border-line" style={`--n:${siguiente.data.accent}`}>
+        <div class="container-x py-14 md:py-20">
+          <span class="label">{tr('projects.next')} →</span>
+          <span class="display mt-4 block text-[clamp(2.5rem,10vw,6rem)] transition-colors group-hover:text-[var(--n)]">{siguiente.data.title}</span>
+        </div>
+      </a>
+    )
+  }
+  <Contact lang={lang} />
+</Layout>

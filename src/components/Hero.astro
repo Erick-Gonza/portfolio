@@ -1,0 +1,58 @@
+---
+import { ruta, t, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+---
+
+<section class="relative isolate flex min-h-svh flex-col overflow-hidden" data-hero>
+  <!-- Póster: se ve al instante y se queda si no hay WebGL, si el equipo es lento o con reduced-motion. -->
+  <div class="hero-poster absolute inset-0 -z-20 transition-opacity duration-1000" aria-hidden="true">
+    <svg class="absolute top-[14%] -right-[30%] w-[115%] max-w-none sm:-right-[12%] sm:w-[75%] md:top-[8%] md:-right-[6%] md:w-[58%]" viewBox="0 0 400 400">
+      <defs>
+        <radialGradient id="pl" cx="35%" cy="35%" r="70%">
+          <stop offset="0" stop-color="var(--accent)"></stop>
+          <stop offset=".55" stop-color="color-mix(in oklab, var(--accent) 45%, var(--bg))"></stop>
+          <stop offset="1" stop-color="var(--bg)"></stop>
+        </radialGradient>
+      </defs>
+      <ellipse cx="200" cy="200" rx="190" ry="42" fill="none" stroke="var(--line)" stroke-width="2" transform="rotate(-18 200 200)"></ellipse>
+      <polygon points="200,60 321,130 321,270 200,340 79,270 79,130" fill="url(#pl)" opacity=".95"></polygon>
+      <circle cx="330" cy="88" r="14" fill="var(--accent-2)" opacity=".85"></circle>
+    </svg>
+  </div>
+  <canvas class="hero-canvas absolute inset-0 -z-10 size-full opacity-0 transition-opacity duration-1000" aria-hidden="true" data-hero-canvas></canvas>
+  <!-- Velo para que el texto siempre se lea sobre la escena. -->
+  <div class="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t from-bg via-bg/40 to-transparent md:bg-gradient-to-r md:from-bg md:via-bg/50" aria-hidden="true"></div>
+
+  <div class="container-x flex flex-1 flex-col justify-end pt-28 pb-10 md:justify-center md:pb-24">
+    <p class="label flex items-center gap-2" data-reveal>
+      <span class="relative flex size-2"><span class="absolute inline-flex size-full animate-ping rounded-full bg-accent-2 opacity-60"></span><span class="relative inline-flex size-2 rounded-full bg-accent-2"></span></span>
+      {tr('hero.kicker')}
+    </p>
+    <h1 class="display mt-5 text-[clamp(2.6rem,10.5vw,8rem)]">
+      <span class="block" data-reveal style="--d:.05s">{tr('hero.title.1')}</span>
+      <span class="outline-text block" data-reveal style="--d:.15s">{tr('hero.title.2')}</span>
+      <span class="block text-accent" data-reveal style="--d:.25s">{tr('hero.title.3')}</span>
+    </h1>
+    <p class="mt-6 max-w-md text-lg text-fg/80" data-reveal style="--d:.35s">{tr('hero.lead')}</p>
+    <div class="mt-8 flex flex-col gap-3 xs:flex-row" data-reveal style="--d:.45s">
+      <a href={ruta(lang, 'contact')} class="btn btn-primary">
+        {tr('hero.cta')} <span aria-hidden="true">→</span>
+      </a>
+      <a href={ruta(lang, 'projects')} class="btn btn-ghost">{tr('hero.secondary')}</a>
+    </div>
+    <p class="label mt-10 hidden items-center gap-2 opacity-0 transition-opacity duration-700 md:flex" data-hero-hint>
+      <span aria-hidden="true">◎</span>
+      {tr('hero.hint')}
+    </p>
+  </div>
+</section>
+
+<script>
+  import { arrancarHero } from '../scripts/hero';
+  arrancarHero();
+</script>

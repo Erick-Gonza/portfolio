@@ -1,0 +1,32 @@
+---
+interface Props {
+  label: string;
+}
+const { label } = Astro.props;
+---
+
+<button
+  type="button"
+  class="inline-flex size-10 items-center justify-center rounded-full border border-line bg-bg/70 backdrop-blur-md hover:border-fg"
+  aria-label={label}
+  title={label}
+  data-theme-toggle
+>
+  <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+    <circle cx="12" cy="12" r="8"></circle>
+    <path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"></path>
+  </svg>
+</button>
+
+<script>
+  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
+    const root = document.documentElement;
+    const actual = root.dataset.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const nuevo = actual === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = nuevo;
+    try {
+      localStorage.setItem('tema', nuevo);
+    } catch {}
+    dispatchEvent(new CustomEvent('tema', { detail: nuevo }));
+  });
+</script>

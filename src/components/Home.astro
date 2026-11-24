@@ -1,0 +1,104 @@
+---
+import Hero from './Hero.astro';
+import ProjectRow from './ProjectRow.astro';
+import PostItem from './PostItem.astro';
+import Contact from './Contact.astro';
+import SectionHead from './SectionHead.astro';
+import { ruta, t, type Lang } from '../i18n/ui';
+import { posts, proyectos } from '../data/contenido';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+const destacados = (await proyectos(lang)).filter((p) => p.data.featured).slice(0, 4);
+const ultimos = (await posts(lang)).slice(0, 3);
+
+const stack = ['Astro', 'Next.js', 'React', 'TypeScript', 'three.js', 'Unity', 'C# / .NET', 'PostgreSQL', 'Tailwind', 'Docker', 'Blender', 'IA / LLMs'];
+
+const servicios = [
+  { n: '01', titulo: tr('services.web.title'), texto: tr('services.web.body'), glifo: '◐' },
+  { n: '02', titulo: tr('services.apps.title'), texto: tr('services.apps.body'), glifo: '▦' },
+  { n: '03', titulo: tr('services.3d.title'), texto: tr('services.3d.body'), glifo: '△' },
+];
+---
+
+<Hero lang={lang} />
+
+<!-- Cinta de stack. -->
+<div class="border-y border-line py-4" aria-label="Stack">
+  <div class="marquee">
+    {
+      [0, 1].map((k) => (
+        <div aria-hidden={k === 1 ? 'true' : undefined}>
+          {stack.map((s) => (
+            <span class="flex items-center gap-10 font-display text-2xl font-bold whitespace-nowrap md:text-3xl">
+              {s}
+              <span class="text-accent">✦</span>
+            </span>
+          ))}
+        </div>
+      ))
+    }
+  </div>
+</div>
+
+<!-- Servicios. -->
+<section class="container-x py-20 md:py-32" aria-labelledby="servicios">
+  <SectionHead id="servicios" n="01" label={tr('services.label')} title={tr('services.title')} />
+  <div class="mt-12 grid gap-px overflow-hidden rounded-3xl border border-line bg-line md:grid-cols-3">
+    {
+      servicios.map((s, i) => (
+        <article class="group relative bg-bg p-6 transition-colors hover:bg-bg-2 md:p-8" data-reveal style={`--d:${i * 0.08}s`}>
+          <div class="flex items-start justify-between">
+            <span class="font-mono text-xs text-muted">{s.n}</span>
+            <span class="text-4xl text-accent transition-transform duration-700 ease-fluid group-hover:rotate-180" aria-hidden="true">
+              {s.glifo}
+            </span>
+          </div>
+          <h3 class="mt-16 font-display text-2xl font-bold tracking-tight md:mt-24">{s.titulo}</h3>
+          <p class="mt-3 text-fg/70">{s.texto}</p>
+        </article>
+      ))
+    }
+  </div>
+</section>
+
+<!-- Proyectos destacados. -->
+<section class="py-20 md:py-32" aria-labelledby="proyectos">
+  <div class="container-x">
+    <SectionHead id="proyectos" n="02" label={tr('projects.label')} title={tr('projects.title')}>
+      <a href={ruta(lang, 'projects')} class="btn btn-ghost hidden md:inline-flex">{tr('projects.all')} →</a>
+    </SectionHead>
+  </div>
+  <ol class="mt-12 border-t border-line">
+    {destacados.map((p, i) => <ProjectRow proyecto={p} lang={lang} index={i} />)}
+  </ol>
+  <div class="container-x mt-8 md:hidden">
+    <a href={ruta(lang, 'projects')} class="btn btn-ghost w-full">{tr('projects.all')} →</a>
+  </div>
+</section>
+
+<!-- Blog. -->
+{
+  ultimos.length > 0 && (
+    <section class="container-x py-20 md:py-32" aria-labelledby="blog">
+      <SectionHead id="blog" n="03" label={tr('blog.label')} title={tr('blog.latest')}>
+        <a href={ruta(lang, 'blog')} class="btn btn-ghost hidden md:inline-flex">
+          {tr('blog.all')} →
+        </a>
+      </SectionHead>
+      <ul class="mt-12 border-t border-line">
+        {ultimos.map((p) => (
+          <PostItem post={p} lang={lang} />
+        ))}
+      </ul>
+      <a href={ruta(lang, 'blog')} class="btn btn-ghost mt-8 w-full md:hidden">
+        {tr('blog.all')} →
+      </a>
+    </section>
+  )
+}
+
+<Contact lang={lang} n="04" />

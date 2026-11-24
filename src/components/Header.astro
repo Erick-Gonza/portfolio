@@ -1,0 +1,131 @@
+---
+import { ruta, t, type Lang } from '../i18n/ui';
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  lang: Lang;
+  alt: string;
+}
+const { lang, alt } = Astro.props;
+const tr = t(lang);
+const path = Astro.url.pathname;
+
+const links = [
+  { href: ruta(lang, 'projects'), label: tr('nav.projects') },
+  { href: ruta(lang, 'blog'), label: tr('nav.blog') },
+  { href: ruta(lang, 'about'), label: tr('nav.about') },
+];
+const activo = (href: string) => path.startsWith(href.replace(/\/$/, ''));
+---
+
+<header class="fixed inset-x-0 top-0 z-50" data-header>
+  <div class="container-x flex h-16 items-center justify-between gap-4">
+    <a href={ruta(lang, 'home')} class="font-display text-xl font-extrabold tracking-tight" aria-label="Inicio">
+      erick<span class="text-accent">.</span>
+    </a>
+
+    <nav class="hidden items-center gap-1 rounded-full border border-line bg-bg/70 p-1 backdrop-blur-md md:flex">
+      {
+        links.map((l) => (
+          <a
+            href={l.href}
+            class:list={[
+              'rounded-full px-4 py-1.5 text-sm transition-colors',
+              activo(l.href) ? 'bg-fg text-bg' : 'text-fg/80 hover:text-fg',
+            ]}
+            aria-current={activo(l.href) ? 'page' : undefined}
+          >
+            {l.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a
+        href={alt}
+        hreflang={lang === 'es' ? 'en' : 'es'}
+        class="hidden h-10 items-center rounded-full border border-line bg-bg/70 px-3 font-mono text-xs uppercase backdrop-blur-md hover:border-fg sm:inline-flex"
+        aria-label={tr('lang.switch')}
+      >
+        {lang === 'es' ? 'EN' : 'ES'}
+      </a>
+      <ThemeToggle label={tr('theme.toggle')} />
+      <a href={ruta(lang, 'contact')} class="btn btn-primary hidden !min-h-10 !px-4 text-sm md:inline-flex">
+        {tr('nav.contact')}
+      </a>
+      <button
+        type="button"
+        class="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-bg/70 px-4 text-sm backdrop-blur-md md:hidden"
+        aria-expanded="false"
+        aria-controls="menu-movil"
+        data-menu-open
+      >
+        {tr('nav.menu')}
+        <span class="flex w-4 flex-col gap-1" aria-hidden="true">
+          <span class="h-px w-full bg-current"></span><span class="h-px w-2/3 bg-current"></span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Menú móvil a pantalla completa. -->
+  <div
+    id="menu-movil"
+    class="fixed inset-0 z-50 flex flex-col bg-bg px-4 pt-4 pb-[max(2rem,env(safe-area-inset-bottom))] md:hidden"
+    hidden
+    data-menu
+  >
+    <div class="flex h-12 items-center justify-between">
+      <span class="font-display text-xl font-extrabold">erick<span class="text-accent">.</span></span>
+      <button type="button" class="h-10 rounded-full border border-line px-4 text-sm" data-menu-close>
+        {tr('nav.close')}
+      </button>
+    </div>
+    <nav class="mt-10 flex flex-col">
+      {
+        [...links, { href: ruta(lang, 'contact'), label: tr('nav.contact') }].map((l, i) => (
+          <a href={l.href} class="flex items-baseline gap-4 border-b border-line py-4" data-menu-link>
+            <span class="font-mono text-xs text-muted">0{i + 1}</span>
+            <span class="display text-5xl">{l.label}</span>
+          </a>
+        ))
+      }
+    </nav>
+    <div class="mt-auto flex items-center justify-between">
+      <a href={alt} class="font-mono text-sm uppercase underline underline-offset-4">{tr('lang.switch')}</a>
+      <span class="label">Monterrey · MX</span>
+    </div>
+  </div>
+</header>
+
+<script>
+  const header = document.querySelector<HTMLElement>('[data-header]')!;
+  const menu = document.querySelector<HTMLElement>('[data-menu]')!;
+  const abrir = document.querySelector<HTMLButtonElement>('[data-menu-open]')!;
+  const cerrar = document.querySelector<HTMLButtonElement>('[data-menu-close]')!;
+
+  const set = (open: boolean) => {
+    menu.hidden = !open;
+    abrir.setAttribute('aria-expanded', String(open));
+    document.documentElement.style.overflow = open ? 'hidden' : '';
+    (open ? cerrar : abrir).focus();
+  };
+  abrir.addEventListener('click', () => set(true));
+  cerrar.addEventListener('click', () => set(false));
+  menu.querySelectorAll('[data-menu-link]').forEach((a) => a.addEventListener('click', () => set(false)));
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && !menu.hidden && set(false));
+
+  // El header se esconde al bajar y vuelve al subir.
+  let last = 0;
+  addEventListener(
+    'scroll',
+    () => {
+      const y = scrollY;
+      header.style.transform = y > last && y > 200 ? 'translateY(-110%)' : '';
+      last = y;
+    },
+    { passive: true },
+  );
+  header.style.transition = 'transform .5s cubic-bezier(.32,.72,0,1)';
+</script>

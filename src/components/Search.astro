@@ -1,0 +1,86 @@
+---
+import { t, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+---
+
+<!-- Búsqueda con Pagefind. El índice se genera después del build (ver script «build»), filtrado por idioma con el
+     atributo lang del <html>. En `pnpm dev` no existe el índice y se muestra un aviso. -->
+<div class="mt-8" data-search data-lang={lang} data-dev={import.meta.env.DEV ? '1' : ''}>
+  <label class="relative block">
+    <span class="sr-only">{tr('blog.search')}</span>
+    <svg class="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+    <input
+      type="search"
+      class="block h-12 w-full rounded-full border border-line bg-bg-2/60 pr-4 pl-11 text-base focus:border-accent focus:outline-none"
+      placeholder={tr('blog.searchPlaceholder')}
+      autocomplete="off"
+      data-search-input
+    />
+  </label>
+  <ul class="mt-4 empty:hidden" data-search-results aria-live="polite"></ul>
+  <p class="mt-3 hidden font-mono text-xs text-muted" data-search-dev>{tr('blog.searchDev')}</p>
+</div>
+
+<script>
+  type Resultado = { url: string; meta: { title?: string }; excerpt: string };
+  type Pagefind = {
+    init: () => Promise<void>;
+    debouncedSearch: (q: string) => Promise<{ results: { data: () => Promise<Resultado> }[] } | null>;
+  };
+
+  const raiz = document.querySelector<HTMLElement>('[data-search]')!;
+  const input = raiz.querySelector<HTMLInputElement>('[data-search-input]')!;
+  const lista = raiz.querySelector<HTMLUListElement>('[data-search-results]')!;
+  let pf: Pagefind | null = null;
+
+  async function cargar() {
+    if (pf) return pf;
+    try {
+      const url = '/pagefind/pagefind.js';
+      pf = (await import(/* @vite-ignore */ url)) as Pagefind;
+      await pf.init();
+    } catch {
+      raiz.querySelector<HTMLElement>('[data-search-dev]')!.classList.remove('hidden');
+      pf = null;
+    }
+    return pf;
+  }
+
+  input.addEventListener('focus', cargar, { once: true });
+  input.addEventListener('input', async () => {
+    const q = input.value.trim();
+    if (!q) {
+      lista.replaceChildren();
+      return;
+    }
+    const p = await cargar();
+    const res = await p?.debouncedSearch(q);
+    if (!res) return;
+    const datos = await Promise.all(res.results.slice(0, 6).map((r) => r.data()));
+    lista.replaceChildren(
+      ...datos
+        .filter((d) => d.url.includes('/blog/'))
+        .map((d) => {
+          const li = document.createElement('li');
+          li.className = 'border-b border-line';
+          const a = document.createElement('a');
+          a.href = d.url;
+          a.className = 'block py-4 hover:text-accent';
+          const h = document.createElement('strong');
+          h.className = 'font-display text-lg';
+          h.textContent = d.meta.title ?? d.url;
+          const ex = document.createElement('p');
+          ex.className = 'mt-1 text-sm text-fg/70';
+          ex.innerHTML = d.excerpt; // Pagefind devuelve el extracto escapado, con <mark> en las coincidencias.
+          a.append(h, ex);
+          li.append(a);
+          return li;
+        }),
+    );
+  });
+</script>

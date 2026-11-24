@@ -1,0 +1,49 @@
+---
+title: "Orion Consultoría"
+summary: "Landing de mi consultora de IA a la medida: una página de venta guiada por objeciones, con calculadora y una galaxia animada en canvas."
+year: 2026
+role: "Diseño y desarrollo"
+category: "web"
+status: "produccion"
+stack: ["Astro 7", "Tailwind CSS 4", "TypeScript", "GSAP", "Lenis", "Canvas 2D", "nginx", "Dokploy"]
+links:
+  demo: "https://orion-consultoria.tech"
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/orion-consultoria"
+featured: false
+order: 5
+accent: "#a99cff"
+---
+
+## El problema
+
+Orion es mi consultora: diseño y entrego soluciones de IA hechas para cada negocio, con un plazo máximo de una semana desde el diagnóstico hasta la entrega. Necesitaba una página que explicara esa oferta a dueños de negocio sin caer en promesas vacías ni cifras inventadas, y que llevara a un solo paso: agendar una llamada de diagnóstico gratis.
+
+{/* PREGUNTA: ¿Ya tienes clientes o proyectos entregados con Orion que se puedan mencionar? ¿Equivale y el juego cuentan como trabajos de Orion? */}
+
+## La solución
+
+La página sigue un guion de venta de arriba abajo: la promesa concreta (IA a la medida, lista en 7 días) con la semana del proyecto como visual; el costo de esperar, con una calculadora donde el visitante pone sus propias horas y tarifa; un manifiesto que se ilumina palabra por palabra con el scroll; el proceso día por día; ejemplos de soluciones; una comparativa con la consultoría tradicional; preguntas frecuentes que responden objeciones, y el mismo llamado a la acción al cierre.
+
+La regla del contenido es no inventar nada: la calculadora usa los números del visitante y aclara que no es una promesa de ahorro, y la sección de testimonios no se publica hasta tener reseñas reales.
+
+## Cómo está construido
+
+Parte de mi template de landings en Astro y lo adapté a esta oferta.
+
+- Todo el contenido vive en `src/data/sitio.ts`; las secciones, las metas, el JSON-LD y `llms.txt` leen de ahí. Un campo vacío no llega al build y en desarrollo se marca como pendiente.
+- SEO: JSON-LD con `ProfessionalService`, `WebSite`, `WebPage` y `FAQPage`, sitemap, `robots.txt` y `llms.txt` para asistentes de IA.
+- Tema claro y oscuro con tokens en CSS, sin parpadeo al cargar, y tipografía Geist servida desde el propio dominio.
+- Lenis para el scroll suave sincronizado con GSAP ScrollTrigger; las entradas usan IntersectionObserver en vez de escuchar el scroll.
+- Build estático servido con nginx en Docker, desplegado en Dokploy en cada push.
+
+## Retos técnicos
+
+- **Una galaxia en canvas que no estorbe.** El fondo es un canvas 2D con tres poblaciones de estrellas (campo suelto, brazos espirales y polvo fino que dibuja la forma), con rotación diferencial (el centro gira más rápido que los bordes), titileo y parallax por profundidad. La cantidad se escala por área de pantalla con topes, las estrellas se generan en unidades relativas para que la barra del navegador en móvil no las reacomode, y los colores salen de variables CSS para seguir el tema.
+- **Respetar a quien no quiere movimiento.** Con `prefers-reduced-motion` la galaxia se pinta en un solo fotograma, no se activa Lenis y el manifiesto aparece completo.
+- **Una calculadora honesta.** Valida en línea, marca el error junto al campo y conserva el último resultado válido en vez de mostrar `NaN`.
+
+## Estado y siguientes pasos
+
+Está publicada en `orion-consultoria.tech`. En el repositorio quedan pendientes el enlace de agenda del botón principal, el contacto, testimonios reales, precio y textos legales. El template trae un recorrido de video que avanza con el scroll, pero en esta página decidí no usarlo y dejar una portada estática y ligera.
+
+{/* PREGUNTA: El brief menciona video scrubeado con el scroll, pero el código de esta landing no lo usa (index.astro dice que la portada es un hero estático). ¿Lo agregaste después o lo describo así? ¿El CTA ya tiene enlace en producción? */}

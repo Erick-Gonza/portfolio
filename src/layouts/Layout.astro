@@ -1,0 +1,105 @@
+---
+import '../styles/global.css';
+import { Font } from 'astro:assets';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { locales, t, type Lang } from '../i18n/ui';
+import { persona, umami } from '../data/sitio';
+
+interface Props {
+  lang: Lang;
+  title?: string;
+  description?: string;
+  /** Ruta de esta misma página en el otro idioma. Si no hay traducción, va a la portada del otro idioma. */
+  alt?: string | null;
+  noindex?: boolean;
+  type?: 'website' | 'article';
+  jsonLd?: Record<string, unknown>;
+}
+
+const { lang, title, description, alt, noindex = false, type = 'website', jsonLd } = Astro.props;
+const tr = t(lang);
+const otro: Lang = lang === 'es' ? 'en' : 'es';
+const fullTitle = title ? `${title} · ${persona.nombreCorto}` : tr('meta.title');
+const desc = description ?? tr('meta.description');
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const altUrl = alt ? new URL(alt, Astro.site) : null;
+const ogImage = new URL('/og.png', Astro.site);
+
+const persona_ld = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: persona.nombre,
+  url: Astro.site?.href,
+  email: `mailto:${persona.email}`,
+  jobTitle: lang === 'es' ? 'Desarrollador full-stack' : 'Full-stack developer',
+  address: { '@type': 'PostalAddress', addressLocality: 'Monterrey', addressCountry: 'MX' },
+  sameAs: [persona.github, persona.linkedin],
+  worksFor: { '@type': 'Organization', name: persona.empresa.nombre, url: persona.empresa.url },
+};
+---
+
+<!doctype html>
+<html lang={locales[lang].html}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+      try {
+        const tema = localStorage.getItem('tema');
+        if (tema === 'light' || tema === 'dark') document.documentElement.dataset.theme = tema;
+      } catch {}
+    </script>
+    <title>{fullTitle}</title>
+    <meta name="description" content={desc} />
+    <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
+    <meta name="theme-color" content="#f1efe8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#07070c" media="(prefers-color-scheme: dark)" />
+    <Font cssVariable="--font-syne" preload />
+    <Font cssVariable="--font-geist" preload />
+    <Font cssVariable="--font-geist-mono" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="Blog" href={lang === 'es' ? '/rss.xml' : '/en/rss.xml'} />
+    {
+      !noindex && (
+        <>
+          <link rel="canonical" href={canonical} />
+          <link rel="alternate" hreflang={locales[lang].html} href={canonical} />
+          {altUrl && <link rel="alternate" hreflang={locales[otro].html} href={altUrl} />}
+          <link rel="alternate" hreflang="x-default" href={lang === 'es' ? canonical : (altUrl ?? canonical)} />
+        </>
+      )
+    }
+
+    <meta property="og:type" content={type} />
+    <meta property="og:locale" content={locales[lang].og} />
+    <meta property="og:site_name" content={persona.nombre} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd ?? persona_ld)} />
+    {umami.src && umami.websiteId && <script is:inline defer src={umami.src} data-website-id={umami.websiteId} />}
+  </head>
+  <body class="min-h-dvh">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] btn btn-primary">
+      {tr('nav.skip')}
+    </a>
+    <div class="grain" aria-hidden="true"></div>
+    <Header lang={lang} alt={alt ?? (otro === 'es' ? '/' : '/en/')} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer lang={lang} />
+    <script>
+      import '../scripts/reveal';
+    </script>
+  </body>
+</html>

@@ -1,0 +1,117 @@
+---
+import SectionHead from './SectionHead.astro';
+import { t, type Lang } from '../i18n/ui';
+import { persona } from '../data/sitio';
+
+interface Props {
+  lang: Lang;
+  n?: string;
+}
+const { lang, n } = Astro.props;
+const tr = t(lang);
+const id = lang === 'es' ? 'contacto' : 'contact';
+const wa = `https://wa.me/${persona.whatsapp}?text=${encodeURIComponent(tr('contact.whatsappMsg'))}`;
+const campo =
+  'mt-2 block w-full rounded-2xl border border-line bg-bg-2/60 px-4 py-3.5 text-base text-fg placeholder:text-muted/70 transition-colors focus:border-accent focus:outline-none';
+---
+
+<section id={id} class="relative overflow-hidden border-t border-line bg-bg-2/40 py-20 md:py-32" aria-labelledby={`${id}-t`}>
+  <div class="container-x grid gap-12 md:grid-cols-[1fr_1.1fr] md:gap-16">
+    <div>
+      <SectionHead id={`${id}-t`} n={n} label={tr('contact.label')} title={tr('contact.title')} />
+      <p class="mt-6 max-w-md text-lg text-fg/75" data-reveal>{tr('contact.lead')}</p>
+
+      <p class="label mt-10">{tr('contact.or')}</p>
+      <div class="mt-4 flex flex-col gap-3" data-reveal>
+        <a href={wa} target="_blank" rel="noopener" class="btn btn-ghost justify-between">
+          <span>WhatsApp</span><span class="font-mono text-xs text-muted">{persona.whatsappVisible}</span>
+        </a>
+        <a href={`mailto:${persona.email}`} class="btn btn-ghost justify-between">
+          <span>Email</span><span class="truncate font-mono text-xs text-muted">{persona.email}</span>
+        </a>
+        <div class="grid grid-cols-2 gap-3">
+          <a href={persona.linkedin} target="_blank" rel="noopener" class="btn btn-ghost">LinkedIn ↗</a>
+          <a href={persona.github} target="_blank" rel="noopener" class="btn btn-ghost">GitHub ↗</a>
+        </div>
+      </div>
+    </div>
+
+    <form
+      method="post"
+      action="/api/contacto"
+      class="relative flex flex-col gap-5 self-start rounded-3xl border border-line bg-bg p-5 md:p-8"
+      data-contacto
+      data-reveal
+      novalidate
+    >
+      <input type="hidden" name="lang" value={lang} />
+      <!-- Trampa para bots: los humanos no la ven. -->
+      <div class="absolute -left-[9999px]" aria-hidden="true">
+        <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+      <label class="block">
+        <span class="text-sm font-medium">{tr('contact.name')}</span>
+        <input class={campo} type="text" name="nombre" required minlength="2" maxlength="100" autocomplete="name" />
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium">{tr('contact.email')}</span>
+        <input class={campo} type="email" name="email" required maxlength="200" autocomplete="email" inputmode="email" />
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium">{tr('contact.message')}</span>
+        <textarea class:list={[campo, 'min-h-40 resize-y']} name="mensaje" required minlength="10" maxlength="5000" placeholder={tr('contact.messageHint')}></textarea>
+      </label>
+      <button type="submit" class="btn btn-primary w-full" data-enviar>
+        <span data-texto>{tr('contact.send')}</span> <span aria-hidden="true">→</span>
+      </button>
+      <p class="min-h-6 text-sm" role="status" aria-live="polite" data-estado></p>
+    </form>
+  </div>
+</section>
+
+<script define:vars={{ msgs: { ok: tr('contact.ok'), error: tr('contact.error'), invalid: tr('contact.invalid'), sending: tr('contact.sending'), send: tr('contact.send') } }}>
+  const form = document.querySelector('[data-contacto]');
+  const estado = form.querySelector('[data-estado]');
+  const boton = form.querySelector('[data-enviar]');
+  const texto = boton.querySelector('[data-texto]');
+
+  // Sin JS el formulario hace POST normal y el servidor redirige con ?contacto=ok|error.
+  const q = new URLSearchParams(location.search).get('contacto');
+  if (q) {
+    estado.textContent = q === 'ok' ? msgs.ok : msgs.error;
+    estado.style.color = q === 'ok' ? 'var(--accent-2)' : 'var(--accent)';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+      estado.textContent = msgs.invalid;
+      estado.style.color = 'var(--accent)';
+      form.querySelector(':invalid')?.focus();
+      return;
+    }
+    boton.disabled = true;
+    texto.textContent = msgs.sending;
+    estado.textContent = '';
+    try {
+      const r = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' },
+      });
+      const ok = r.ok && (await r.json()).ok;
+      estado.textContent = ok ? msgs.ok : msgs.error;
+      estado.style.color = ok ? 'var(--fg)' : 'var(--accent)';
+      if (ok) {
+        form.reset();
+        window.umami?.track?.('contacto');
+      }
+    } catch {
+      estado.textContent = msgs.error;
+      estado.style.color = 'var(--accent)';
+    } finally {
+      boton.disabled = false;
+      texto.textContent = msgs.send;
+    }
+  });
+</script>

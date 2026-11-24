@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "portfolio-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "--port", "4321"],
+      "port": 4321
+    },
+    {
+      "name": "portfolio-prod",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["./dist/server/entry.mjs"],
+      "port": 4322,
+      "env": { "PORT": "4322", "HOST": "127.0.0.1" }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+---
+title: "Vaciado"
+summary: "Generador de moldes de dos piezas en el navegador: cargas un STL y obtienes las dos mitades listas para imprimir, sin subir nada a un servidor."
+year: 2026
+role: "Diseño y desarrollo"
+category: "tool"
+status: "prototipo"
+stack: ["TypeScript", "three.js", "Manifold (WASM)", "three-bvh-csg", "three-mesh-bvh", "Web Workers", "Vite"]
+links:
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/3d-mold"
+featured: true
+order: 3
+accent: "#ff7a3d"
+---
+
+## El problema
+
+Para sacar copias de una figura en resina, yeso o silicona necesitas un molde de dos piezas. Diseñarlo en un programa CAD no es trivial: hay que partir el bloque por un plano, restar la figura, poner un bebedero y respiraderos para que no quede aire atrapado, llaves de registro para que las mitades encajen y revisar que la pieza se pueda sacar sin quedar trabada. Es mucho trabajo para algo que se repite casi igual cada vez.
+
+{/* PREGUNTA: ¿Por qué lo hiciste? ¿Lo usas para colar tus propias piezas, y con qué material? ¿Ya imprimiste y probaste moldes reales? */}
+
+## La solución
+
+Vaciado carga un STL en el navegador y genera el molde completo. Hay dos tipos: *caja* (un bloque partido por el plano) y *contorno* (una carcasa que sigue la forma de la figura, con pestaña de unión y base plana opcional). El plano de partición se elige en X, Y u horizontal. El bebedero con embudo se coloca solo en el punto más alto, los respiraderos en los picos donde quedaría aire, y las llaves de registro y los agujeros para tornillos se reparten donde caben. Las zonas con contrasalida se pintan en rojo para cambiar el plano antes de imprimir. Cada mitad se exporta a STL binario, con compensación de contracción del material. Un modo de rayos X muestra las mitades translúcidas con la figura dentro.
+
+Todo el cálculo corre en local; nada se sube.
+
+## Cómo está construido
+
+El cálculo vive en un Web Worker, separado del visor.
+
+- `grid.ts`: voxeliza el modelo y calcula un campo de distancias exacto.
+- `surfaceNets.ts`: construye la carcasa del modo contorno a partir de ese campo.
+- `generate.ts`: elige bebedero, respiraderos, llaves y tornillos, y encadena las operaciones booleanas.
+- `csg.ts`: una interfaz `Csg` con dos motores, Manifold (WebAssembly) y three-bvh-csg.
+- `undercut.ts`: detección de contrasalidas por cara, con una BVH.
+- `viewer.ts`: el visor en three.js, con cama de impresión, corte de sección y el material de rayos X (Fresnel con mezcla aditiva).
+
+## Retos técnicos
+
+- **Saber qué está dentro de una malla imperfecta.** La voxelización lanza un rayo vertical por columna y cuenta el sentido de cada cruce (número de vueltas). Si la columna no cierra porque el STL tiene agujeros, cae a paridad e ignora el último cruce para no rellenar hasta el techo. Los rayos llevan un desfase irracional para no pasar justo por aristas.
+- **Distancias exactas sin fuerza bruta.** El campo de distancias usa la transformada de Felzenszwalb, separable por ejes, que da la distancia euclídea exacta en tiempo lineal. De ahí salen el grosor de la carcasa y la ubicación de bebedero, respiraderos y llaves.
+- **Dos motores booleanos.** Manifold es más rápido y devuelve mallas cerradas, pero exige una figura cerrada. Si falla, el worker repite con three-bvh-csg, que tolera mallas rotas, y lo avisa. La cavidad se resta primero a propósito: si Manifold va a fallar, falla al principio y el reintento no repite trabajo.
+- **Respuesta mientras arrastras un slider.** Hay dos workers: uno de vista previa con vóxel grueso que responde en fracciones de segundo y otro de calidad final que se lanza al soltar. Cada uno guarda en caché las etapas que no dependen del parámetro tocado, así que mover un respiradero solo repite las últimas operaciones. Un `bench.html` mide cada etapa, lo que salió de caché y cuántas aristas abiertas quedan.
+
+## Estado y siguientes pasos
+
+Es un prototipo funcional: genera, previsualiza y exporta ambos tipos de molde, y no tiene URL pública todavía. Cuando la figura no es cerrada, el STL que sale del motor tolerante puede tener uniones en T; los laminadores las suelen reparar, pero es el punto más débil.
+
+{/* PREGUNTA: ¿Tienes tiempos reales del bench (por ejemplo, para una malla de 100k triángulos)? ¿Piensas publicarlo con una URL? */}

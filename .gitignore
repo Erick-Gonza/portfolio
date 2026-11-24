@@ -1,0 +1,11 @@
+dist/
+.astro/
+node_modules/
+.env
+.env.*
+!.env.example
+*.blend1
+.DS_Store
+
+# Borradores internos (preguntas abiertas, perfil)
+notas/perfil.md

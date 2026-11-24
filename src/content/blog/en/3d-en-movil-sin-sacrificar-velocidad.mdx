@@ -1,0 +1,48 @@
+---
+title: "A 3D hero that doesn't punish your phone"
+description: 'How I built the space scene on this portfolio with three.js without making the text wait for 3D or draining the battery on mobile.'
+date: 2026-11-24
+tags: ['three.js', 'performance', 'astro']
+---
+
+The home page of this site has a low-poly planet with an asteroid ring and a ship that orbits and reacts to your cursor (or to the gyroscope, if you open it on your phone). It looks good, but a 3D hero carries an obvious risk: the page loads slowly, the phone heats up, and the visitor leaves before reading a single line.
+
+These are the rules I followed so that doesn't happen.
+
+## 1. Text never waits for 3D
+
+The home page HTML is prerendered by Astro and doesn't depend on JavaScript. Behind the headline there's an **SVG poster**: a gradient hexagon and a ring, under 1 kB, that shows up instantly.
+
+three.js loads later, as a separate chunk, once the browser has finished painting and is idle (`requestIdleCallback`). When the scene is ready, the canvas fades in and the poster fades out.
+
+## 2. Decide before downloading
+
+Before importing three.js I check whether it's worth it:
+
+- `prefers-reduced-motion`: if the person asked for less motion, the poster stays.
+- Data saver mode (`navigator.connection.saveData`).
+- Very limited devices: low memory (`deviceMemory`) or few cores.
+- WebGL 2 support.
+
+If any check fails, the visitor sees the poster and the page works the same. Nobody downloads 150 kB of 3D engine they won't use.
+
+## 3. Less of everything on mobile
+
+On small screens the scene is the same, just cheaper:
+
+- The planet uses one less subdivision level (roughly half the faces).
+- Fewer stars and fewer asteroids.
+- `devicePixelRatio` capped at 1.5 and no antialiasing: on a high-density screen you barely notice, and the GPU thanks you.
+- The asteroids are an `InstancedMesh`, so the whole ring is drawn in a single call.
+
+## 4. Don't draw what isn't visible
+
+The render loop stops when the hero scrolls out of view (`IntersectionObserver`) or when the tab goes to the background (`visibilitychange`). If you scroll down to read the projects, the GPU gets a break.
+
+## 5. The gyroscope on iOS needs permission
+
+On Android the `deviceorientation` event just arrives. On iOS you have to ask for permission from a user gesture, so the request happens on the first tap on the hero. If the person says no, the scene keeps animating on its own.
+
+## What's next
+
+Right now the scene uses geometry generated in code. The next step is swapping it for low-poly models made in Blender and exported to GLB. The scene already looks for those objects by name (`Planeta`, `Luna`, `Nave`, `Asteroide`), so the swap will be just dropping in a file.

@@ -1,0 +1,19 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { langDeUrl, ruta, t } from '../i18n/ui';
+
+const lang = langDeUrl(Astro.url);
+const tr = t(lang);
+---
+
+<Layout lang={lang} title={tr('404.title')} noindex>
+  <section class="container-x flex min-h-[80svh] flex-col justify-center pt-28 pb-16">
+    <p class="label">404</p>
+    <h1 class="display mt-4 text-[clamp(3rem,12vw,8rem)]">
+      <span class="outline-text block">404</span>
+      {tr('404.title')}
+    </h1>
+    <p class="mt-6 text-lg text-fg/75">{tr('404.body')}</p>
+    <a href={ruta(lang, 'home')} class="btn btn-primary mt-8 self-start">{tr('404.home')} →</a>
+  </section>
+</Layout>

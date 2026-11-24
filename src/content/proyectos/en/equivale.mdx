@@ -1,0 +1,50 @@
+---
+title: "Equivale"
+summary: "SMAE exchange-list diet planning for nutritionists: from patient assessment to a plan exported as PDF, Word or Excel, with no server."
+year: 2026
+role: "Design & development"
+category: "app"
+status: "produccion"
+stack: ["JavaScript", "Vite", "jsPDF", "SheetJS", "JSZip", "Docker", "nginx", "Dokploy"]
+links:
+  demo: "https://equivale.orion-consultoria.tech"
+  # repo privado, descomentar si se hace público: "https://github.com/Erick-Gonza/equivale"
+featured: true
+order: 2
+accent: "#0e6b5c"
+---
+
+## The problem
+
+In Mexico, meal plans are usually built with the SMAE (the Mexican food exchange system): you estimate energy needs, turn the macronutrient split into exchanges per food group, spread them over five meals and then put together a menu that matches. In practice it's often done in spreadsheets or by hand. Every step depends on the previous one, so an early mistake ends up in the plan the patient takes home.
+
+{/* PREGUNTA: Who did you build it for? Is a real nutritionist or clinic using it, and how many people use it today? */}
+
+## The solution
+
+Equivale walks through a consultation in five steps: assessment, diet calculation, distribution, menu and final plan. From weight, height, age, sex and activity level it computes BMI, waist-to-hip ratio, ideal and adjusted weight, and energy expenditure with four equations (Harris-Benedict, FAO/WHO, Mifflin-St Jeor and IOM), including the extra for pregnancy or breastfeeding. Given the calorie target and macro split, it proposes exchanges for each of the 19 groups, distributes them across meals and lets you build the menu from a 527-food catalog. A renal mode checks sodium, potassium, phosphorus and protein per kilo against their limits.
+
+The plan exports to PDF, Word and Excel with the nutritionist's details. Everything lives in the browser: no accounts, no server, and data is backed up and restored as a file.
+
+## How it's built
+
+It started as a single-file HTML prototype, which I migrated to Vite with ES modules split by responsibility.
+
+- `calc.js`: SMAE groups, equations and pure calculations, no DOM.
+- `state.js`: state, debounced saving to `localStorage` and data migrations between versions.
+- `outputs.js`: every derived value is recomputed on each change and written into nodes tagged with `data-o`, without re-rendering the view.
+- `exports.js`: jsPDF + autotable, SheetJS and JSZip are loaded on demand with `import()`, so they stay out of the initial bundle.
+- Deployment: a multi-stage Dockerfile (Node builds, nginx serves `dist/`) on Dokploy, with immutable caching for hashed assets.
+
+## Technical challenges
+
+- **Proposing exchanges that add up.** `autoEq` sets a base (vegetables, fruit, milk, legumes) and then adjusts grains, animal protein and fats over up to eight iterations, rounding to half exchanges, until it lands within 3% of the calorie target. In vegetarian mode protein comes from legumes, capped so carbs don't overshoot.
+- **Splitting without losing half exchanges.** Per-meal distribution works in half-exchange units and uses the largest-remainder method, so each group's meals always sum to its total.
+- **Word files without a Word library.** The `.docx` is built by hand: I write the WordprocessingML (paragraphs, tables, borders) and zip it with JSZip.
+- **Updating the catalog without overwriting user data.** The catalog is versioned; when the version goes up, the migration adds new foods by id and leaves alone anything the nutritionist edited, hid or created. The extended catalog documents its sources (SMAE for portions, USDA FoodData Central for composition) and flags estimates.
+
+## Status and next steps
+
+It's in production at `equivale.orion-consultoria.tech`, redeployed automatically on every push. The main limitation comes from the design itself: data is tied to the browser and the domain, which is why the app reminds you to back up. Syncing across devices would need a backend and accounts, which it doesn't have today.
+
+{/* PREGUNTA: Did a nutritionist validate the equations and the catalog? Any plans for sync, accounts or more features? */}

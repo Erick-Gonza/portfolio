@@ -1,0 +1,159 @@
+---
+import fs from 'node:fs';
+import Layout from '../../layouts/Layout.astro';
+import SectionHead from '../SectionHead.astro';
+import Contact from '../Contact.astro';
+import { ruta, t, type Lang } from '../../i18n/ui';
+import { persona } from '../../data/sitio';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const tr = t(lang);
+const otro: Lang = lang === 'es' ? 'en' : 'es';
+// El botón del CV solo aparece cuando el PDF existe en public/.
+const cv = persona.cv[lang];
+const hayCv = fs.existsSync(`${process.cwd()}/public${cv}`);
+
+const es = lang === 'es';
+
+const bloques = es
+  ? [
+      { t: 'Web', items: ['TypeScript', 'Astro', 'Next.js', 'React', 'Tailwind CSS', 'three.js', 'GSAP', 'Vite'] },
+      { t: 'Backend y datos', items: ['Node.js', 'ASP.NET Core', 'PostgreSQL', 'Drizzle', 'EF Core', 'Redis', 'SignalR', 'pg-boss'] },
+      { t: '3D y juegos', items: ['Unity 6', 'C#', 'FishNet', 'Blender', 'Manifold (WASM)', 'three-mesh-bvh'] },
+      { t: 'Infra y calidad', items: ['Docker', 'Dokploy', 'Cloudflare Workers', 'GitHub Actions', 'Vitest', 'xUnit', 'Playwright'] },
+      { t: 'IA', items: ['Anthropic', 'OpenAI', 'Gemini', 'Agentes de código', 'WhatsApp (Kapso)'] },
+    ]
+  : [
+      { t: 'Web', items: ['TypeScript', 'Astro', 'Next.js', 'React', 'Tailwind CSS', 'three.js', 'GSAP', 'Vite'] },
+      { t: 'Backend & data', items: ['Node.js', 'ASP.NET Core', 'PostgreSQL', 'Drizzle', 'EF Core', 'Redis', 'SignalR', 'pg-boss'] },
+      { t: '3D & games', items: ['Unity 6', 'C#', 'FishNet', 'Blender', 'Manifold (WASM)', 'three-mesh-bvh'] },
+      { t: 'Infra & quality', items: ['Docker', 'Dokploy', 'Cloudflare Workers', 'GitHub Actions', 'Vitest', 'xUnit', 'Playwright'] },
+      { t: 'AI', items: ['Anthropic', 'OpenAI', 'Gemini', 'Coding agents', 'WhatsApp (Kapso)'] },
+    ];
+
+const principios = es
+  ? [
+      ['Producto completo', 'Del modelo de datos a la interfaz, el servidor y el despliegue. Una sola persona responsable de que todo funcione junto.'],
+      ['Datos que no se rompen', 'Transacciones, idempotencia, bitácoras de auditoría y pruebas contra bases reales. El dinero y las recetas no admiten errores.'],
+      ['Primero el teléfono', 'La mayoría de tus clientes te van a ver desde el celular. Diseño y mido ahí antes que en escritorio.'],
+    ]
+  : [
+      ['The whole product', 'From the data model to the interface, the server and the deploy. One person accountable for everything working together.'],
+      ["Data that doesn't break", 'Transactions, idempotency, audit logs and tests against real databases. Money and prescriptions leave no room for mistakes.'],
+      ['Phone first', 'Most of your customers will see you on their phone. I design and measure there before desktop.'],
+    ];
+---
+
+<Layout lang={lang} title={tr('about.label')} description={tr('meta.description')} alt={ruta(otro, 'about')}>
+  <section class="container-x pt-32 pb-16 md:pt-44">
+    <SectionHead as="h1" label={tr('about.label')} title={tr('about.title')} />
+    <div class="mt-10 grid gap-10 md:grid-cols-[1.2fr_1fr] md:gap-16">
+      <div class="prose-x" data-reveal>
+        {
+          es ? (
+            <>
+              <p class="text-xl text-fg">
+                Soy desarrollador full-stack en {persona.ciudad}. Construyo productos completos: el modelo de datos, las
+                reglas de negocio, la interfaz y el servidor donde corren.
+              </p>
+              <p>
+                Mi trabajo va de sistemas para negocios (una app de dietocálculo para nutriólogos, un sistema de gestión
+                para ópticas) a herramientas con mucha geometría, como un generador de moldes 3D que corre en el
+                navegador, y un MMORPG espacial con servidores autoritativos en Unity y .NET.
+              </p>
+              <p>
+                Desde{' '}
+                <a href={persona.empresa.url} target="_blank" rel="noopener">
+                  {persona.empresa.nombre}
+                </a>{' '}
+                hago software e IA a la medida para negocios. Trabajo con agentes de código como parte normal de mi
+                flujo, y eso me deja dedicar más tiempo a lo que importa: entender el problema y que el resultado
+                funcione.
+              </p>
+            </>
+          ) : (
+            <>
+              <p class="text-xl text-fg">
+                I'm a full-stack developer in {persona.ciudad}. I build complete products: the data model, the business
+                rules, the interface and the server they run on.
+              </p>
+              <p>
+                My work ranges from business software (a diet-planning app for nutritionists, a management system for
+                optical stores) to geometry-heavy tools, like a 3D mold generator that runs in the browser, and a space
+                MMORPG with authoritative servers in Unity and .NET.
+              </p>
+              <p>
+                Through{' '}
+                <a href={persona.empresa.url} target="_blank" rel="noopener">
+                  {persona.empresa.nombre}
+                </a>{' '}
+                I build custom software and AI for businesses. I work with coding agents as a normal part of my
+                workflow, which frees me to spend more time on what matters: understanding the problem and making sure
+                the result works.
+              </p>
+            </>
+          )
+        }
+        {/* PREGUNTA: años de experiencia, formación y trabajos anteriores para completar esta sección. */}
+      </div>
+      <aside class="flex flex-col gap-3 self-start" data-reveal style="--d:.1s">
+        {
+          hayCv && (
+            <a href={cv} class="btn btn-primary" download>
+              {tr('about.cv')} ↓
+            </a>
+          )
+        }
+        <a href={persona.linkedin} target="_blank" rel="noopener" class="btn btn-ghost">LinkedIn ↗</a>
+        <a href={persona.github} target="_blank" rel="noopener" class="btn btn-ghost">GitHub ↗</a>
+        <div class="mt-4 rounded-2xl border border-line p-5">
+          <p class="label">{tr('about.now')}</p>
+          <p class="mt-3 text-sm text-fg/80">
+            {
+              es
+                ? 'Llevando Orion Galaxy a su siguiente versión y aceptando proyectos nuevos de webs y sistemas.'
+                : 'Taking Orion Galaxy to its next release and taking on new website and software projects.'
+            }
+          </p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="container-x py-16">
+    <div class="grid gap-px overflow-hidden rounded-3xl border border-line bg-line md:grid-cols-3">
+      {
+        principios.map(([titulo, texto], i) => (
+          <div class="bg-bg p-6 md:p-8" data-reveal style={`--d:${i * 0.08}s`}>
+            <span class="font-mono text-xs text-accent">0{i + 1}</span>
+            <h2 class="mt-8 font-display text-2xl font-bold tracking-tight">{titulo}</h2>
+            <p class="mt-3 text-fg/70">{texto}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="container-x py-16 md:py-24">
+    <p class="label">{tr('about.stack')}</p>
+    <div class="mt-8 flex flex-col">
+      {
+        bloques.map((b) => (
+          <div class="grid gap-4 border-t border-line py-6 md:grid-cols-[14rem_1fr]" data-reveal>
+            <h3 class="font-display text-xl font-bold">{b.t}</h3>
+            <div class="flex flex-wrap gap-2">
+              {b.items.map((i) => (
+                <span class="chip !text-sm">{i}</span>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <Contact lang={lang} />
+</Layout>
