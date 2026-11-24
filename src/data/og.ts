@@ -108,7 +108,7 @@ export async function renderOg(e: OgEntrada) {
             h('div', { display: 'flex', marginTop: 28, fontSize: 30, lineHeight: 1.35, color: '#c9c7c0' }, e.texto.length > 150 ? `${e.texto.slice(0, 147)}…` : e.texto),
           ]),
           h('div', { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }, [
-            h('div', { display: 'flex', fontFamily: 'Bricolage', fontSize: 40 }, [h('span', {}, 'erick'), h('span', { color: '#ff5b2e' }, '.')]),
+            h('div', { display: 'flex', fontFamily: 'Bricolage', fontSize: 40 }, [h('span', {}, 'erick'), h('span', { color: '#ff5b2e' }, '.dev')]),
             h('div', { display: 'flex', fontFamily: 'Geist Mono', fontSize: 22, color: e.acento }, new URL(import.meta.env.SITE).host),
           ]),
         ],
