@@ -19,8 +19,6 @@ To cast copies of a figure in resin, plaster or silicone you need a two-part mol
 
 I built Vaciado as an **open source** tool so anyone who casts parts can generate a mold in minutes, without wrestling with CAD.
 
-{/* PREGUNTA: Have you printed and tested real molds? With what material? */}
-
 ## The solution
 
 Vaciado loads an STL in the browser and generates the full mold. There are two kinds: *box* (a block split by the plane) and *contour* (a shell that follows the figure's shape, with a joining flange and an optional flat base). The parting plane can be X, Y or horizontal. The funnel spout is placed automatically at the highest point, vents go on the peaks where air would get trapped, and registration keys and screw holes are spread wherever they fit. Undercuts are painted red so you can change the plane before printing. Each half exports to binary STL, with shrinkage compensation for the casting material. An X-ray mode shows the halves as translucent shells with the figure inside.
@@ -49,4 +47,4 @@ The computation lives in a Web Worker, separate from the viewer.
 
 It's a working prototype: it generates, previews and exports both mold types, and it doesn't have a public URL yet. When the figure isn't closed, the STL from the tolerant engine can have T-junctions; slicers usually repair them, but it's the weakest spot.
 
-{/* PREGUNTA: Do you have real bench timings (for example, for a 100k-triangle mesh)? Do you plan to publish it with a URL? */}
+It's not in beta yet: I'm still testing and polishing it before opening it to the public.

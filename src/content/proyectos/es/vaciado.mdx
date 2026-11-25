@@ -19,8 +19,6 @@ Para sacar copias de una figura en resina, yeso o silicona necesitas un molde de
 
 Hice Vaciado como herramienta **open source** para que cualquiera que cuele piezas pueda generar su molde en minutos, sin pelearse con un CAD.
 
-{/* PREGUNTA: ¿Ya imprimiste y probaste moldes reales? ¿Con qué material? */}
-
 ## La solución
 
 Vaciado carga un STL en el navegador y genera el molde completo. Hay dos tipos: *caja* (un bloque partido por el plano) y *contorno* (una carcasa que sigue la forma de la figura, con pestaña de unión y base plana opcional). El plano de partición se elige en X, Y u horizontal. El bebedero con embudo se coloca solo en el punto más alto, los respiraderos en los picos donde quedaría aire, y las llaves de registro y los agujeros para tornillos se reparten donde caben. Las zonas con contrasalida se pintan en rojo para cambiar el plano antes de imprimir. Cada mitad se exporta a STL binario, con compensación de contracción del material. Un modo de rayos X muestra las mitades translúcidas con la figura dentro.
@@ -49,4 +47,4 @@ El cálculo vive en un Web Worker, separado del visor.
 
 Es un prototipo funcional: genera, previsualiza y exporta ambos tipos de molde, y no tiene URL pública todavía. Cuando la figura no es cerrada, el STL que sale del motor tolerante puede tener uniones en T; los laminadores las suelen reparar, pero es el punto más débil.
 
-{/* PREGUNTA: ¿Tienes tiempos reales del bench (por ejemplo, para una malla de 100k triángulos)? ¿Piensas publicarlo con una URL? */}
+Todavía no está en beta: lo sigo probando y puliendo antes de abrirlo al público.
