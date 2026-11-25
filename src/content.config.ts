@@ -10,6 +10,8 @@ const proyectos = defineCollection({
   schema: z.object({
     title: z.string(),
     summary: z.string().max(200),
+    // Resumen de tres líneas que se muestra arriba del caso de estudio (para leerlo en 10 segundos).
+    resumen: z.object({ problema: z.string(), solucion: z.string(), resultado: z.string() }).optional(),
     year: z.number().int(),
     role: z.string(),
     category: z.enum(['app', 'game', 'web', 'tool']),

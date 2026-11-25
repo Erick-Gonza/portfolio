@@ -18,24 +18,24 @@ const year = new Date().getFullYear();
       </a>
       <p class="mt-4 max-w-xs text-sm text-muted">{tr('footer.made')}</p>
     </div>
-    <nav class="flex flex-col gap-2 text-sm">
+    <nav class="flex flex-col items-start text-sm">
       <span class="label mb-2">{lang === 'es' ? 'Sitio' : 'Site'}</span>
-      <a href={ruta(lang, 'projects')} class="hover:text-accent">{tr('nav.projects')}</a>
-      <a href={ruta(lang, 'blog')} class="hover:text-accent">{tr('nav.blog')}</a>
-      <a href={ruta(lang, 'about')} class="hover:text-accent">{tr('nav.about')}</a>
-      <a href={ruta(lang, 'rss')} class="hover:text-accent">{tr('blog.rss')}</a>
+      <a href={ruta(lang, 'projects')} class="inline-flex min-h-8 items-center hover:text-accent">{tr('nav.projects')}</a>
+      <a href={ruta(lang, 'blog')} class="inline-flex min-h-8 items-center hover:text-accent">{tr('nav.blog')}</a>
+      <a href={ruta(lang, 'about')} class="inline-flex min-h-8 items-center hover:text-accent">{tr('nav.about')}</a>
+      <a href={ruta(lang, 'rss')} class="inline-flex min-h-8 items-center hover:text-accent">{tr('blog.rss')}</a>
     </nav>
-    <div class="flex flex-col gap-2 text-sm">
+    <div class="flex flex-col items-start text-sm">
       <span class="label mb-2">{tr('nav.contact')}</span>
-      <a href={`mailto:${persona.email}`} class="break-all hover:text-accent" data-umami-event="email" data-umami-event-ubicacion="footer">{persona.email}</a>
-      <a href={`https://wa.me/${persona.whatsapp}`} data-umami-event="whatsapp" data-umami-event-ubicacion="footer" class="hover:text-accent" rel="noopener" target="_blank">WhatsApp</a>
-      <a href={persona.linkedin} class="hover:text-accent" rel="noopener" target="_blank">LinkedIn</a>
-      <a href={persona.github} class="hover:text-accent" rel="noopener" target="_blank">GitHub</a>
+      <a href={`mailto:${persona.email}`} class="inline-flex min-h-8 items-center break-all hover:text-accent" data-umami-event="email" data-umami-event-ubicacion="footer">{persona.email}</a>
+      <a href={`https://wa.me/${persona.whatsapp}`} data-umami-event="whatsapp" data-umami-event-ubicacion="footer" class="inline-flex min-h-8 items-center hover:text-accent" rel="noopener" target="_blank">WhatsApp</a>
+      <a href={persona.linkedin} class="inline-flex min-h-8 items-center hover:text-accent" rel="noopener" target="_blank">LinkedIn</a>
+      <a href={persona.github} class="inline-flex min-h-8 items-center hover:text-accent" rel="noopener" target="_blank">GitHub</a>
     </div>
   </div>
   <div class="container-x flex flex-wrap justify-between gap-2 border-t border-line py-5 font-mono text-xs text-muted">
     <span>© {year} {persona.nombre} · {persona.ciudad}</span>
-    <a href="https://github.com/Erick-Gonza/portfolio" class="hover:text-fg" rel="noopener" target="_blank">
+    <a href="https://github.com/Erick-Gonza/portfolio" class="inline-flex min-h-8 items-center hover:text-fg" rel="noopener" target="_blank">
       {tr('footer.source')} ↗
     </a>
   </div>

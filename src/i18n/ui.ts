@@ -62,7 +62,7 @@ export const ui = {
     'hero.title.3': 'de software.',
     'hero.lead':
       'Sistemas a la medida, agentes de IA y consultoría para que tu negocio automatice lo repetitivo y crezca. Del diagnóstico al servidor, sin intermediarios.',
-    'hero.cta': 'Trabajemos juntos',
+    'hero.cta': 'Cuéntame tu proyecto',
     'hero.secondary': 'Ver proyectos',
     'hero.hint': 'Mueve el cursor o inclina el teléfono',
 
@@ -110,6 +110,10 @@ export const ui = {
     'projects.repo': 'Código',
     'projects.back': 'Todos los proyectos',
     'projects.next': 'Siguiente proyecto',
+    'projects.problem': 'Problema',
+    'projects.solution': 'Solución',
+    'projects.result': 'Resultado',
+    'blog.toc': 'En este post',
     'status.produccion': 'En producción',
     'status.beta': 'Beta',
     'status.prototipo': 'Prototipo',
@@ -155,7 +159,10 @@ export const ui = {
     'contact.sending': 'Enviando…',
     'contact.ok': '¡Listo! Tu mensaje llegó. Te escribo pronto.',
     'contact.error': 'No se pudo enviar. Escríbeme por WhatsApp o correo mientras lo reviso.',
-    'contact.invalid': 'Revisa tu nombre, un correo válido y un mensaje de al menos 10 caracteres.',
+    'contact.err.nombre': 'Escribe tu nombre (al menos 2 letras).',
+    'contact.err.email': 'Escribe un correo válido, por ejemplo nombre@empresa.com.',
+    'contact.err.mensaje': 'Cuéntame un poco más: al menos 10 caracteres.',
+    'contact.invalid': 'Revisa los campos marcados.',
     'contact.or': 'O directo por',
     'contact.whatsappMsg': 'Hola Erick, vi tu portafolio y me interesa platicar sobre un proyecto.',
 
@@ -187,7 +194,7 @@ export const ui = {
     'hero.title.3': 'developer.',
     'hero.lead':
       'Custom software, AI agents and consulting so your business automates the repetitive work and grows. From diagnosis to the server, with no middlemen.',
-    'hero.cta': "Let's work together",
+    'hero.cta': 'Tell me about your project',
     'hero.secondary': 'See projects',
     'hero.hint': 'Move your cursor or tilt your phone',
 
@@ -233,6 +240,10 @@ export const ui = {
     'projects.repo': 'Source',
     'projects.back': 'All projects',
     'projects.next': 'Next project',
+    'projects.problem': 'Problem',
+    'projects.solution': 'Solution',
+    'projects.result': 'Result',
+    'blog.toc': 'In this post',
     'status.produccion': 'In production',
     'status.beta': 'Beta',
     'status.prototipo': 'Prototype',
@@ -278,7 +289,10 @@ export const ui = {
     'contact.sending': 'Sending…',
     'contact.ok': "Done! Your message arrived. I'll be in touch soon.",
     'contact.error': "Couldn't send it. Reach me on WhatsApp or email while I look into it.",
-    'contact.invalid': 'Check your name, a valid email and a message of at least 10 characters.',
+    'contact.err.nombre': 'Enter your name (at least 2 letters).',
+    'contact.err.email': 'Enter a valid email, for example name@company.com.',
+    'contact.err.mensaje': 'Tell me a bit more: at least 10 characters.',
+    'contact.invalid': 'Please check the highlighted fields.',
     'contact.or': 'Or reach me on',
     'contact.whatsappMsg': "Hi Erick, I saw your portfolio and I'd like to talk about a project.",
 

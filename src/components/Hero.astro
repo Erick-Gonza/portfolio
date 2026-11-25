@@ -36,7 +36,7 @@ const tr = t(lang);
     <h1 class="display mt-5 text-[clamp(2.75rem,12vw,9rem)]">
       <span class="block" data-reveal style="--d:.05s">{tr('hero.title.1')}</span>
       <span class="outline-text block" data-reveal style="--d:.15s">{tr('hero.title.2')}</span>
-      <span class="block text-accent" data-reveal style="--d:.25s">{tr('hero.title.3')}</span>
+      <span class="block" data-reveal style="--d:.25s">{tr('hero.title.3').replace(/\.$/, '')}<span class="text-accent">.</span></span>
     </h1>
     <p class="mt-6 max-w-md text-lg text-fg/80" data-reveal style="--d:.35s">{tr('hero.lead')}</p>
     <div class="mt-8 flex flex-col gap-3 xs:flex-row" data-reveal style="--d:.45s">

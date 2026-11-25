@@ -149,7 +149,7 @@ const principios = es
       {
         principios.map(([titulo, texto], i) => (
           <div class="group bg-bg p-6 transition-colors hover:bg-bg-2 md:p-8" data-reveal style={`--d:${i * 0.08}s`}>
-            <span class="font-mono text-xs text-accent">0{i + 1}</span>
+            <span class="font-mono text-xs text-muted">0{i + 1}</span>
             <div class="mt-4">
               <PrincipleVisual tipo={(['producto', 'datos', 'movil'] as const)[i]} />
             </div>

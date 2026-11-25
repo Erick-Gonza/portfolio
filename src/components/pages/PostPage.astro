@@ -13,7 +13,8 @@ const { lang, post } = Astro.props;
 const tr = t(lang);
 const d = post.data;
 const slug = slugDe(post);
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
+const indice = headings.filter((h) => h.depth === 2);
 const otro: Lang = lang === 'es' ? 'en' : 'es';
 const hayTraduccion = !!(await traduccion('blog', slug, otro));
 const alt = hayTraduccion ? ruta(otro, 'blog', slug) : ruta(otro, 'blog');
@@ -51,8 +52,62 @@ const ld = {
         )
       }
     </header>
-    <div class="prose-x mt-14 md:ml-[16%]" data-pagefind-body>
-      <Content />
+    <div class="mt-14 grid gap-10 lg:grid-cols-[minmax(0,1fr)_15rem] lg:gap-16">
+      <div class="lg:order-2">
+        {
+          indice.length > 1 && (
+            <nav aria-label={tr('blog.toc')} class="lg:sticky lg:top-24">
+              <details class="group rounded-2xl border border-line p-4 lg:border-0 lg:p-0" open>
+                <summary class="label flex min-h-8 cursor-pointer list-none items-center justify-between lg:cursor-default">
+                  {tr('blog.toc')}
+                  <span class="transition-transform group-open:rotate-180 lg:hidden" aria-hidden="true">
+                    ▾
+                  </span>
+                </summary>
+                <ol class="mt-3 flex flex-col border-l border-line">
+                  {indice.map((h) => (
+                    <li>
+                      <a
+                        href={`#${h.slug}`}
+                        class="-ml-px flex min-h-8 items-center border-l border-transparent py-1 pl-4 text-sm text-fg/70 hover:border-fg hover:text-fg"
+                        data-toc-link
+                      >
+                        {h.text}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            </nav>
+          )
+        }
+      </div>
+      <div class="prose-x lg:order-1" data-pagefind-body>
+        <Content />
+      </div>
     </div>
   </article>
 </Layout>
+
+<script>
+  // Marca en el índice la sección que se está leyendo.
+  const enlaces = new Map(
+    [...document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]')].map((a) => [decodeURIComponent(a.hash.slice(1)), a]),
+  );
+  if (enlaces.size) {
+    const io = new IntersectionObserver(
+      (entradas) => {
+        for (const e of entradas) {
+          if (!e.isIntersecting) continue;
+          enlaces.forEach((a) => a.classList.remove('!border-accent', '!text-fg'));
+          enlaces.get(e.target.id)?.classList.add('!border-accent', '!text-fg');
+        }
+      },
+      { rootMargin: '-20% 0px -70% 0px' },
+    );
+    enlaces.forEach((_, id) => {
+      const h = document.getElementById(id);
+      if (h) io.observe(h);
+    });
+  }
+</script>

@@ -25,7 +25,7 @@ const activo = (href: string) => path.startsWith(href.replace(/\/$/, ''));
     class="pointer-events-none absolute inset-x-0 top-0 h-16 border-b border-transparent transition-[background-color,border-color] duration-500 group-data-[solido=true]:border-line group-data-[solido=true]:bg-bg/85 group-data-[solido=true]:backdrop-blur-lg"
     aria-hidden="true"
   ></div>
-  <div class="container-x relative flex h-16 items-center justify-between gap-4">
+  <div class="container-x relative flex h-16 items-center justify-between gap-4" data-header-bar>
     <a href={ruta(lang, 'home')} class="font-display text-xl font-extrabold tracking-tight" aria-label="Inicio">
       erick<span class="text-accent">.dev</span>
     </a>
@@ -58,7 +58,7 @@ const activo = (href: string) => path.startsWith(href.replace(/\/$/, ''));
       </a>
       <ThemeToggle label={tr('theme.toggle')} />
       <a href={ruta(lang, 'contact')} data-umami-event="cta-contacto" data-umami-event-ubicacion="header" class="btn btn-primary hidden !min-h-10 !px-4 text-sm md:inline-flex">
-        {tr('nav.contact')}
+        <span class="lg:hidden">{tr('nav.contact')}</span><span class="hidden lg:inline">{tr('hero.cta')}</span>
       </a>
       <button
         type="button"
@@ -111,12 +111,38 @@ const activo = (href: string) => path.startsWith(href.replace(/\/$/, ''));
   const abrir = document.querySelector<HTMLButtonElement>('[data-menu-open]')!;
   const cerrar = document.querySelector<HTMLButtonElement>('[data-menu-close]')!;
 
+  // Mientras el menú está abierto, el resto de la página queda inerte: el teclado y los lectores de pantalla no pueden
+  // salir del menú hasta cerrarlo.
+  const fondo = () =>
+    [
+      header.querySelector<HTMLElement>('[data-header-bar]'),
+      document.querySelector<HTMLElement>('#main'),
+      document.querySelector<HTMLElement>('footer'),
+      document.querySelector<HTMLElement>('[data-wa-flotante]'),
+      document.querySelector<HTMLElement>('a[href="#main"]'),
+    ].filter((el): el is HTMLElement => !!el);
+
   const set = (open: boolean) => {
     menu.hidden = !open;
     abrir.setAttribute('aria-expanded', String(open));
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    fondo().forEach((el) => (el.inert = open));
     (open ? cerrar : abrir).focus();
   };
+  // Respaldo para navegadores sin `inert`: el Tab da la vuelta dentro del menú.
+  menu.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const focos = [...menu.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')];
+    const primero = focos[0];
+    const ultimo = focos[focos.length - 1];
+    if (e.shiftKey && document.activeElement === primero) {
+      e.preventDefault();
+      ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault();
+      primero.focus();
+    }
+  });
   abrir.addEventListener('click', () => set(true));
   cerrar.addEventListener('click', () => set(false));
   menu.querySelectorAll('[data-menu-link]').forEach((a) => a.addEventListener('click', () => set(false)));

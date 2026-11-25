@@ -33,7 +33,16 @@ const servicios = lista.sort((a, b) => a.n.localeCompare(b.n));
 <Hero lang={lang} />
 
 <!-- Cinta de stack. -->
-<div class="border-y border-line py-4" aria-label="Stack">
+<div class="relative border-y border-line py-4" aria-label="Stack" data-marquee data-pausado="false">
+  <button
+    type="button"
+    class="absolute top-1/2 right-2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-bg/80 text-muted backdrop-blur hover:text-fg motion-reduce:hidden"
+    aria-pressed="false"
+    aria-label={es ? 'Pausar la animación de la cinta' : 'Pause the ticker animation'}
+    data-marquee-toggle
+  >
+    <svg viewBox="0 0 16 16" class="size-3" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" data-icono-pausa /><rect x="9.5" y="2" width="3.5" height="12" rx="1" data-icono-pausa /><path d="M4 2.5v11l9-5.5Z" class="hidden" data-icono-play /></svg>
+  </button>
   <div class="marquee">
     {
       [0, 1].map((k) => (
@@ -41,7 +50,7 @@ const servicios = lista.sort((a, b) => a.n.localeCompare(b.n));
           {stack.map((s) => (
             <span class="flex items-center gap-10 font-display text-2xl font-bold whitespace-nowrap md:text-3xl">
               {s}
-              <span class="text-accent">✦</span>
+              <span class="text-muted">✦</span>
             </span>
           ))}
         </div>
@@ -49,6 +58,19 @@ const servicios = lista.sort((a, b) => a.n.localeCompare(b.n));
     }
   </div>
 </div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-marquee]').forEach((cinta) => {
+    const boton = cinta.querySelector<HTMLButtonElement>('[data-marquee-toggle]');
+    boton?.addEventListener('click', () => {
+      const pausado = cinta.dataset.pausado !== 'true';
+      cinta.dataset.pausado = String(pausado);
+      boton.setAttribute('aria-pressed', String(pausado));
+      boton.querySelectorAll('[data-icono-pausa]').forEach((el) => el.classList.toggle('hidden', pausado));
+      boton.querySelector('[data-icono-play]')?.classList.toggle('hidden', !pausado);
+    });
+  });
+</script>
 
 <!-- Servicios. -->
 <section class="container-x py-20 md:py-32" aria-labelledby="servicios">

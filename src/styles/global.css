@@ -199,6 +199,11 @@
     color: var(--muted);
     white-space: nowrap;
   }
+  /* Las etiquetas que son enlaces miden al menos 32 px de alto (WCAG 2.2 pide 24×24 como mínimo). */
+  a.chip {
+    min-height: 2rem;
+    padding: 0.35rem 0.85rem;
+  }
 
   /* Ruido de película encima de todo, muy tenue. */
   .grain {
@@ -222,6 +227,12 @@
     gap: 2.5rem;
     padding-right: 2.5rem;
     animation: marquee 40s linear infinite;
+  }
+  /* Se pausa al pasar el cursor, al enfocarla o con el botón de pausa (WCAG 2.2.2). */
+  .marquee:hover > div,
+  .marquee:focus-within > div,
+  [data-marquee][data-pausado='true'] .marquee > div {
+    animation-play-state: paused;
   }
   @keyframes marquee {
     to {

@@ -51,15 +51,18 @@ const campo =
       </div>
       <label class="block">
         <span class="text-sm font-medium">{tr('contact.name')}</span>
-        <input class={campo} type="text" name="nombre" required minlength="2" maxlength="100" autocomplete="name" />
+        <input class={campo} type="text" name="nombre" aria-describedby={`err-nombre-${lang}`} required minlength="2" maxlength="100" autocomplete="name" />
+        <span id={`err-nombre-${lang}`} hidden class="mt-1.5 block text-sm text-accent" data-error-for="nombre">{tr('contact.err.nombre')}</span>
       </label>
       <label class="block">
         <span class="text-sm font-medium">{tr('contact.email')}</span>
-        <input class={campo} type="email" name="email" required maxlength="200" autocomplete="email" inputmode="email" />
+        <input class={campo} type="email" name="email" aria-describedby={`err-email-${lang}`} required maxlength="200" autocomplete="email" inputmode="email" />
+        <span id={`err-email-${lang}`} hidden class="mt-1.5 block text-sm text-accent" data-error-for="email">{tr('contact.err.email')}</span>
       </label>
       <label class="block">
         <span class="text-sm font-medium">{tr('contact.message')}</span>
-        <textarea class:list={[campo, 'min-h-40 resize-y']} name="mensaje" required minlength="10" maxlength="5000" placeholder={tr('contact.messageHint')}></textarea>
+        <textarea class:list={[campo, 'min-h-40 resize-y']} name="mensaje" aria-describedby={`err-mensaje-${lang}`} required minlength="10" maxlength="5000" placeholder={tr('contact.messageHint')}></textarea>
+        <span id={`err-mensaje-${lang}`} hidden class="mt-1.5 block text-sm text-accent" data-error-for="mensaje">{tr('contact.err.mensaje')}</span>
       </label>
       <button type="submit" class="btn btn-primary w-full" data-enviar>
         <span data-texto>{tr('contact.send')}</span> <span aria-hidden="true">→</span>
@@ -82,12 +85,28 @@ const campo =
     estado.style.color = q === 'ok' ? 'var(--accent-2)' : 'var(--accent)';
   }
 
+  // Errores por campo: se marcan al enviar y se actualizan mientras la persona corrige.
+  const campos = ['nombre', 'email', 'mensaje'].map((n) => form.elements.namedItem(n));
+  const marcar = (campo) => {
+    const ok = campo.checkValidity();
+    campo.setAttribute('aria-invalid', String(!ok));
+    campo.style.borderColor = ok ? '' : 'var(--accent)';
+    const err = form.querySelector(`[data-error-for="${campo.name}"]`);
+    if (err) err.hidden = ok;
+    return ok;
+  };
+  campos.forEach((c) => {
+    c.addEventListener('input', () => c.hasAttribute('aria-invalid') && marcar(c));
+    c.addEventListener('blur', () => c.value.trim() && marcar(c));
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!form.checkValidity()) {
+    const validos = campos.map(marcar);
+    if (validos.includes(false)) {
       estado.textContent = msgs.invalid;
       estado.style.color = 'var(--accent)';
-      form.querySelector(':invalid')?.focus();
+      campos[validos.indexOf(false)].focus();
       return;
     }
     boton.disabled = true;
@@ -104,6 +123,10 @@ const campo =
       estado.style.color = ok ? 'var(--fg)' : 'var(--accent)';
       if (ok) {
         form.reset();
+        campos.forEach((c) => {
+          c.removeAttribute('aria-invalid');
+          c.style.borderColor = '';
+        });
         window.umami?.track?.('contacto');
       }
     } catch {
